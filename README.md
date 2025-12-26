@@ -6,10 +6,8 @@ Inspired by [Simon Willison's tools](https://github.com/simonw/tools).
 
 ## Tools
 
-| Tool | Description | Live Demo |
-|------|-------------|-----------|
-| [Coffee Ratio Calculator](coffee-ratio.html) | A simple, beautiful coffee ratio calculator to find the perfect coffee-to-water ratio for your brew strength and serving size. | [Try it](https://pglevy.github.io/tools/coffee-ratio.html) |
-| [Color Converter](color-converter.html) | Convert colors between HEX, RGB, HSL, and other formats. Supports multiple color spaces with live preview. | [Try it](https://pglevy.github.io/tools/color-converter.html) |
+- **[Coffee Ratio Calculator](https://pglevy.github.io/tools/coffee-ratio.html)**: A simple, beautiful coffee ratio calculator to find the perfect coffee-to-water ratio for your brew strength and serving size.
+- **[Color Converter](https://pglevy.github.io/tools/color-converter.html)**: Convert colors between HEX, RGB, HSL, and other formats. Supports multiple color spaces with live preview.
 
 ## Philosophy
 
@@ -21,7 +19,7 @@ These tools are designed to be:
 ## Usage
 
 You can use these tools in several ways:
-1. **Online**: Visit the live demo links above
+1. **Online**: Click the tool links above
 2. **Local**: Download any HTML file and open it in your browser
 3. **Fork**: Clone this repo and modify the tools for your needs
 
