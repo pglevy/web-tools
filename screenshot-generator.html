@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create beautiful screenshots with customizable window frames, backgrounds, shadows, and padding. Paste, drop, or upload images to generate styled screenshots instantly.">
+    <title>Screenshot Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="file"],
+        select,
+        input[type="color"],
+        input[type="range"],
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input[type="range"] {
+            padding: 0;
+        }
+
+        .range-value {
+            display: inline-block;
+            margin-left: 10px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #5568d3;
+        }
+
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #5568d3;
+        }
+
+        .preview-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        #canvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 968px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .color-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            width: 80px;
+            height: 45px;
+            cursor: pointer;
+        }
+
+        .info-text {
+            color: #888;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Screenshot Generator</h1>
+        
+        <div class="grid-layout">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="windowStyle">Window Style</label>
+                    <select id="windowStyle">
+                        <option value="macos">macOS Window</option>
+                        <option value="browser">Browser Chrome</option>
+                        <option value="windows">Windows Window</option>
+                        <option value="none">No Frame</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="bgType">Background Type</label>
+                    <select id="bgType">
+                        <option value="transparent">Transparent</option>
+                        <option value="solid">Solid Color</option>
+                        <option value="gradient">Gradient</option>
+                    </select>
+                </div>
+
+                <div class="control-group" id="bgColorGroup" style="display: none;">
+                    <label for="bgColor">Background Color</label>
+                    <div class="color-group">
+                        <input type="color" id="bgColor" value="#f5f5f5">
+                        <input type="text" id="bgColorHex" value="#f5f5f5" style="width: 100px;">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="padding">Padding: <span class="range-value" id="paddingValue">150px</span></label>
+                    <input type="range" id="padding" min="0" max="200" value="150">
+                </div>
+
+                <div class="control-group">
+                    <label for="shadowBlur">Shadow Blur: <span class="range-value" id="shadowValue">100px</span></label>
+                    <input type="range" id="shadowBlur" min="0" max="100" value="100">
+                </div>
+
+                <div class="control-group">
+                    <label for="cornerRadius">Corner Radius: <span class="range-value" id="radiusValue">8px</span></label>
+                    <input type="range" id="cornerRadius" min="0" max="30" value="8">
+                </div>
+
+                <div class="control-group">
+                    <label for="scale">Scale</label>
+                    <select id="scale">
+                        <option value="1">1x (Original)</option>
+                        <option value="2" selected>2x (Retina)</option>
+                        <option value="3">3x</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button onclick="copyToClipboard()" id="copyBtn" disabled>📋 Copy</button>
+                    <button onclick="downloadImage()" id="downloadBtn" disabled>💾 Download</button>
+                </div>
+            </div>
+
+            <div class="preview-container">
+                <div class="upload-area" id="uploadArea">
+                    <p style="margin-bottom: 10px; font-size: 24px;">📋 Paste or Drop Image</p>
+                    <p style="color: #888; font-size: 16px; margin-bottom: 20px;">Ctrl/Cmd + V to paste anywhere</p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                    <button onclick="document.getElementById('fileInput').click()">
+                        Choose File
+                    </button>
+                </div>
+                <canvas id="canvas" class="hidden"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sourceImage = null;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Handle paste from clipboard
+        document.addEventListener('paste', async (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const blob = item.getAsFile();
+                    loadImageFromBlob(blob);
+                    break;
+                }
+            }
+        });
+
+        // Handle file input
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadImageFromBlob(file);
+            }
+        });
+
+        // Drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                loadImageFromBlob(file);
+            }
+        });
+
+        function loadImageFromBlob(blob) {
+            const img = new Image();
+            img.onload = () => {
+                sourceImage = img;
+                renderScreenshot();
+
+                // Show canvas, hide upload area
+                document.getElementById('uploadArea').classList.add('hidden');
+                document.getElementById('canvas').classList.remove('hidden');
+
+                document.getElementById('copyBtn').disabled = false;
+                document.getElementById('downloadBtn').disabled = false;
+            };
+            img.src = URL.createObjectURL(blob);
+        }
+
+        // Update background color inputs
+        document.getElementById('bgColor').addEventListener('input', (e) => {
+            document.getElementById('bgColorHex').value = e.target.value;
+            if (sourceImage) renderScreenshot();
+        });
+
+        document.getElementById('bgColorHex').addEventListener('input', (e) => {
+            document.getElementById('bgColor').value = e.target.value;
+            if (sourceImage) renderScreenshot();
+        });
+
+        // Background type change
+        document.getElementById('bgType').addEventListener('change', (e) => {
+            const colorGroup = document.getElementById('bgColorGroup');
+            colorGroup.style.display = e.target.value === 'solid' ? 'block' : 'none';
+            if (sourceImage) renderScreenshot();
+        });
+
+        // Range inputs
+        document.getElementById('padding').addEventListener('input', (e) => {
+            document.getElementById('paddingValue').textContent = e.target.value + 'px';
+            if (sourceImage) renderScreenshot();
+        });
+
+        document.getElementById('shadowBlur').addEventListener('input', (e) => {
+            document.getElementById('shadowValue').textContent = e.target.value + 'px';
+            if (sourceImage) renderScreenshot();
+        });
+
+        document.getElementById('cornerRadius').addEventListener('input', (e) => {
+            document.getElementById('radiusValue').textContent = e.target.value + 'px';
+            if (sourceImage) renderScreenshot();
+        });
+
+        // Other controls
+        ['windowStyle', 'scale'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (sourceImage) renderScreenshot();
+            });
+        });
+
+        function renderScreenshot() {
+            if (!sourceImage) return;
+
+            const padding = parseInt(document.getElementById('padding').value);
+            const shadowBlur = parseInt(document.getElementById('shadowBlur').value);
+            const cornerRadius = parseInt(document.getElementById('cornerRadius').value);
+            const windowStyle = document.getElementById('windowStyle').value;
+            const bgType = document.getElementById('bgType').value;
+            const bgColor = document.getElementById('bgColor').value;
+            const scale = parseFloat(document.getElementById('scale').value);
+
+            const windowHeaderHeight = windowStyle !== 'none' ? 40 : 0;
+            
+            // Calculate canvas size
+            const canvasWidth = (sourceImage.width + padding * 2) * scale;
+            const canvasHeight = (sourceImage.height + padding * 2 + windowHeaderHeight) * scale;
+            
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+            ctx.scale(scale, scale);
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+            // Draw background
+            if (bgType === 'solid') {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, canvasWidth / scale, canvasHeight / scale);
+            } else if (bgType === 'gradient') {
+                const gradient = ctx.createLinearGradient(0, 0, canvasWidth / scale, canvasHeight / scale);
+                gradient.addColorStop(0, '#667eea');
+                gradient.addColorStop(1, '#764ba2');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvasWidth / scale, canvasHeight / scale);
+            }
+
+            // Draw shadow
+            if (shadowBlur > 0) {
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+                ctx.shadowBlur = shadowBlur;
+                ctx.shadowOffsetX = shadowBlur / 8;
+                ctx.shadowOffsetY = shadowBlur / 4;
+            }
+
+            // Draw window frame
+            const frameX = padding;
+            const frameY = padding;
+            const frameWidth = sourceImage.width;
+            const frameHeight = sourceImage.height + windowHeaderHeight;
+
+            // Draw window background
+            ctx.fillStyle = windowStyle !== 'none' ? '#ffffff' : 'transparent';
+            roundRect(ctx, frameX, frameY, frameWidth, frameHeight, cornerRadius);
+            ctx.fill();
+
+            // Reset shadow for content
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Draw window controls
+            if (windowStyle === 'macos') {
+                const controlY = frameY + 20;
+                const controlSize = 12;
+                const controlSpacing = 8;
+                
+                // Red
+                ctx.fillStyle = '#FF5F57';
+                ctx.beginPath();
+                ctx.arc(frameX + 15, controlY, controlSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Yellow
+                ctx.fillStyle = '#FFBD2E';
+                ctx.beginPath();
+                ctx.arc(frameX + 15 + controlSize + controlSpacing, controlY, controlSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Green
+                ctx.fillStyle = '#28CA42';
+                ctx.beginPath();
+                ctx.arc(frameX + 15 + (controlSize + controlSpacing) * 2, controlY, controlSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (windowStyle === 'browser') {
+                // Address bar
+                ctx.fillStyle = '#f0f0f0';
+                roundRect(ctx, frameX + 10, frameY + 10, frameWidth - 20, 20, 4);
+                ctx.fill();
+                
+                ctx.fillStyle = '#ccc';
+                ctx.font = '11px monospace';
+                ctx.fillText('https://example.com', frameX + 20, frameY + 24);
+            } else if (windowStyle === 'windows') {
+                // Title bar buttons
+                const btnSize = 12;
+                const btnY = frameY + 14;
+                const btnX = frameX + frameWidth - 60;
+                
+                ctx.fillStyle = '#e0e0e0';
+                ctx.fillRect(btnX, btnY, btnSize, btnSize);
+                ctx.fillRect(btnX + 20, btnY, btnSize, btnSize);
+                ctx.fillRect(btnX + 40, btnY, btnSize, btnSize);
+            }
+
+            // Draw the actual image
+            const imgY = frameY + windowHeaderHeight;
+            
+            // Clip to rounded rectangle for the image
+            ctx.save();
+            if (windowStyle !== 'none') {
+                roundRect(ctx, frameX, imgY, frameWidth, sourceImage.height, 
+                         windowHeaderHeight > 0 ? 0 : cornerRadius, 
+                         windowHeaderHeight > 0 ? 0 : cornerRadius, 
+                         cornerRadius, cornerRadius);
+                ctx.clip();
+            } else {
+                roundRect(ctx, frameX, imgY, frameWidth, sourceImage.height, cornerRadius);
+                ctx.clip();
+            }
+            
+            ctx.drawImage(sourceImage, frameX, imgY, frameWidth, sourceImage.height);
+            ctx.restore();
+
+            // Reset scale
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+
+        function roundRect(ctx, x, y, width, height, radius, radiusTL, radiusTR, radiusBR, radiusBL) {
+            if (typeof radius === 'number') {
+                radiusTL = radiusTR = radiusBR = radiusBL = radius;
+            } else {
+                radiusTL = radiusTL || 0;
+                radiusTR = radiusTR || 0;
+                radiusBR = radiusBR || 0;
+                radiusBL = radiusBL || 0;
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(x + radiusTL, y);
+            ctx.lineTo(x + width - radiusTR, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radiusTR);
+            ctx.lineTo(x + width, y + height - radiusBR);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radiusBR, y + height);
+            ctx.lineTo(x + radiusBL, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radiusBL);
+            ctx.lineTo(x, y + radiusTL);
+            ctx.quadraticCurveTo(x, y, x + radiusTL, y);
+            ctx.closePath();
+        }
+
+        async function copyToClipboard() {
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]);
+                
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy to clipboard. Your browser may not support this feature.');
+            }
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'screenshot-' + Date.now() + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ Inspired by [Simon Willison's tools](https://github.com/simonw/tools).
 
 - **[Coffee Ratio Calculator](https://pglevy.github.io/tools/coffee-ratio.html)**: A simple, beautiful coffee ratio calculator to find the perfect coffee-to-water ratio for your brew strength and serving size.
 - **[Color Converter](https://pglevy.github.io/tools/color-converter.html)**: Convert colors between HEX, RGB, HSL, and other formats. Supports multiple color spaces with live preview.
+- **[Screenshot Generator](https://pglevy.github.io/tools/screenshot-generator.html)**: Create beautiful screenshots with customizable window frames, backgrounds, shadows, and padding. Paste, drop, or upload images to generate styled screenshots instantly.
 
 ## Philosophy
 
