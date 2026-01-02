@@ -1,4 +1,4 @@
-# Tools
+# Web Tools
 
 A collection of simple, standalone HTML tools for everyday tasks. Each tool is a single HTML file with no build process required.
 
