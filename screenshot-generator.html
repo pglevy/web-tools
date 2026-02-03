@@ -402,7 +402,13 @@
                 ctx.fillRect(0, 0, canvasWidth / scale, canvasHeight / scale);
             }
 
-            // Draw shadow
+            // Draw window frame
+            const frameX = padding;
+            const frameY = padding;
+            const frameWidth = sourceImage.width;
+            const frameHeight = sourceImage.height + windowHeaderHeight;
+
+            // Apply shadow
             if (shadowBlur > 0) {
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
                 ctx.shadowBlur = shadowBlur;
@@ -410,20 +416,22 @@
                 ctx.shadowOffsetY = shadowBlur / 4;
             }
 
-            // Draw window frame
-            const frameX = padding;
-            const frameY = padding;
-            const frameWidth = sourceImage.width;
-            const frameHeight = sourceImage.height + windowHeaderHeight;
-
-            // Draw window background
-            ctx.fillStyle = windowStyle !== 'none' ? '#ffffff' : 'transparent';
-            roundRect(ctx, frameX, frameY, frameWidth, frameHeight, cornerRadius);
-            ctx.fill();
+            // Draw window background (or placeholder for shadow when no frame)
+            if (windowStyle !== 'none') {
+                ctx.fillStyle = '#ffffff';
+                roundRect(ctx, frameX, frameY, frameWidth, frameHeight, cornerRadius);
+                ctx.fill();
+            } else {
+                // Draw a filled rectangle to create the shadow, then we'll draw the image over it
+                ctx.fillStyle = '#ffffff';
+                roundRect(ctx, frameX, frameY, frameWidth, sourceImage.height, cornerRadius);
+                ctx.fill();
+            }
 
             // Reset shadow for content
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
 
             // Draw window controls
@@ -482,7 +490,7 @@
                          cornerRadius, cornerRadius);
                 ctx.clip();
             } else {
-                roundRect(ctx, frameX, imgY, frameWidth, sourceImage.height, cornerRadius);
+                roundRect(ctx, frameX, frameY, frameWidth, sourceImage.height, cornerRadius);
                 ctx.clip();
             }
             
