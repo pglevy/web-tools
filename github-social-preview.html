@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View the social preview image for any GitHub repository. See how your repo will appear when shared on social media.">
+    <title>GitHub Social Preview Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #24292e 0%, #1a1d21 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .subtitle {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .note {
+            text-align: center;
+            opacity: 0.7;
+            font-size: 0.85em;
+            margin-bottom: 30px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .github-icon {
+            width: 50px;
+            height: 50px;
+        }
+
+        .input-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #2ea44f;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        button {
+            padding: 16px 32px;
+            background: #2ea44f;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #2c974b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 164, 79, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .examples {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .example {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .preview-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        .preview-section.visible {
+            display: block;
+        }
+
+        .repo-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .repo-name {
+            font-size: 1.5em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .repo-link {
+            color: #58a6ff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            transition: opacity 0.2s;
+        }
+
+        .repo-link:hover {
+            opacity: 0.8;
+        }
+
+        .preview-image {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+            background: #fff;
+        }
+
+        .preview-image.loading {
+            opacity: 0.5;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .action-btn.copied {
+            background: #2ea44f;
+            border-color: #2ea44f;
+        }
+
+        .error-message {
+            background: rgba(220, 38, 38, 0.2);
+            border: 1px solid rgba(220, 38, 38, 0.5);
+            color: #fca5a5;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .loading-spinner.visible {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner-icon {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .github-icon {
+                width: 35px;
+                height: 35px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .repo-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+            </svg>
+            GitHub Social Preview
+        </h1>
+        <p class="subtitle">See how your repository appears when shared on social media</p>
+        <p class="note">Note: For best results, serve this page over HTTP/HTTPS (e.g., via GitHub Pages). Some browsers restrict loading external images from local files.</p>
+
+        <div class="input-section">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="repoInput" 
+                    placeholder="Enter repo (e.g., facebook/react or https://github.com/facebook/react)"
+                    autocomplete="off"
+                >
+                <button onclick="loadPreview()" id="loadBtn">Load Preview</button>
+            </div>
+            
+            <div class="examples">
+                <span>Try:</span>
+                <span class="example" onclick="fillExample('vercel/next.js')">vercel/next.js</span>
+                <span class="example" onclick="fillExample('facebook/react')">facebook/react</span>
+                <span class="example" onclick="fillExample('microsoft/vscode')">microsoft/vscode</span>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <div class="loading-spinner" id="loadingSpinner">
+            <span class="spinner-icon">⟳</span>
+            Loading preview...
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <div class="repo-info">
+                <div class="repo-name" id="repoName"></div>
+                <a class="repo-link" id="repoLink" href="#" target="_blank" rel="noopener noreferrer">
+                    View on GitHub
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+            </div>
+
+            <img class="preview-image" id="previewImage" alt="Repository social preview">
+
+            <div class="actions">
+                <button class="action-btn" onclick="copyImageUrl()">
+                    📋 Copy Image URL
+                </button>
+                <button class="action-btn" onclick="downloadImage()">
+                    💾 Download Image
+                </button>
+                <button class="action-btn" onclick="openInNewTab()">
+                    🔗 Open Image
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const repoInput = document.getElementById('repoInput');
+        const previewSection = document.getElementById('previewSection');
+        const previewImage = document.getElementById('previewImage');
+        const repoName = document.getElementById('repoName');
+        const repoLink = document.getElementById('repoLink');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        let currentImageUrl = '';
+        let currentRepo = { owner: '', repo: '' };
+
+        // Handle Enter key
+        repoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loadPreview();
+            }
+        });
+
+        // Handle paste
+        repoInput.addEventListener('paste', (e) => {
+            setTimeout(() => {
+                const value = repoInput.value.trim();
+                if (value) {
+                    loadPreview();
+                }
+            }, 100);
+        });
+
+        function fillExample(repo) {
+            repoInput.value = repo;
+            loadPreview();
+        }
+
+        function parseRepoInput(input) {
+            input = input.trim();
+            
+            // Remove trailing slash
+            input = input.replace(/\/$/, '');
+            
+            // Handle full GitHub URL
+            const urlMatch = input.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+            if (urlMatch) {
+                return {
+                    owner: urlMatch[1],
+                    repo: urlMatch[2]
+                };
+            }
+            
+            // Handle owner/repo format
+            const shortMatch = input.match(/^([^\/]+)\/([^\/]+)$/);
+            if (shortMatch) {
+                return {
+                    owner: shortMatch[1],
+                    repo: shortMatch[2]
+                };
+            }
+            
+            return null;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('visible');
+            setTimeout(() => {
+                errorMessage.classList.remove('visible');
+            }, 5000);
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('visible');
+        }
+
+        async function loadPreview() {
+            const input = repoInput.value.trim();
+            
+            if (!input) {
+                showError('Please enter a GitHub repository');
+                return;
+            }
+
+            const parsed = parseRepoInput(input);
+            
+            if (!parsed) {
+                showError('Invalid format. Use "owner/repo" or full GitHub URL');
+                return;
+            }
+
+            currentRepo = parsed;
+            hideError();
+            
+            // First verify the repo exists via GitHub API
+            loadingSpinner.classList.add('visible');
+            previewSection.classList.remove('visible');
+            
+            try {
+                const response = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`);
+                
+                if (!response.ok) {
+                    loadingSpinner.classList.remove('visible');
+                    if (response.status === 404) {
+                        showError('Repository not found. Please check the owner and repo name.');
+                    } else if (response.status === 403) {
+                        showError('Rate limited by GitHub API. Please try again in a minute.');
+                    } else {
+                        showError('Could not verify repository. It may be private or unavailable.');
+                    }
+                    return;
+                }
+                
+                // Repo exists, now load the preview image
+                currentImageUrl = `https://opengraph.githubassets.com/1/${parsed.owner}/${parsed.repo}`;
+                
+                repoName.textContent = `${parsed.owner}/${parsed.repo}`;
+                repoLink.href = `https://github.com/${parsed.owner}/${parsed.repo}`;
+                
+                // Set up image handlers
+                previewImage.onload = () => {
+                    loadingSpinner.classList.remove('visible');
+                    previewSection.classList.add('visible');
+                };
+                
+                previewImage.onerror = () => {
+                    loadingSpinner.classList.remove('visible');
+                    showError('Image failed to load. Please try again.');
+                };
+                
+                // Trigger image load
+                previewImage.src = currentImageUrl;
+                
+            } catch (error) {
+                loadingSpinner.classList.remove('visible');
+                showError('Network error. Please check your connection and try again.');
+            }
+        }
+
+        async function copyImageUrl() {
+            try {
+                await navigator.clipboard.writeText(currentImageUrl);
+                
+                const btn = event.target.closest('.action-btn');
+                const originalText = btn.innerHTML;
+                btn.classList.add('copied');
+                btn.innerHTML = '✓ Copied!';
+                
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = originalText;
+                }, 2000);
+            } catch (err) {
+                showError('Failed to copy to clipboard');
+            }
+        }
+
+        function downloadImage() {
+            // For cross-origin images, we need to fetch and create a blob
+            fetch(currentImageUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${currentRepo.owner}-${currentRepo.repo}-preview.png`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                })
+                .catch(() => {
+                    // Fallback: just open in new tab
+                    window.open(currentImageUrl, '_blank');
+                });
+        }
+
+        function openInNewTab() {
+            window.open(currentImageUrl, '_blank');
+        }
+
+        // Focus input on load
+        repoInput.focus();
+    </script>
+</body>
+</html>
