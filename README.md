@@ -6,8 +6,10 @@ Inspired by [Simon Willison's tools](https://github.com/simonw/tools).
 
 ## Tools
 
+- **[AI Context Decision Tree](https://pglevy.github.io/web-tools/ai-context-decision-tree.html)**: An interactive decision tree to help you choose the right AI context mechanism (steering files, skills, hooks, MCP servers, etc.) for your use case.
 - **[Coffee Ratio Calculator](https://pglevy.github.io/web-tools/coffee-ratio.html)**: A simple, beautiful coffee ratio calculator to find the perfect coffee-to-water ratio for your brew strength and serving size.
 - **[Color Converter](https://pglevy.github.io/web-tools/color-converter.html)**: Convert colors between HEX, RGB, HSL, and other formats. Supports multiple color spaces with live preview.
+- **[GitHub Social Preview](https://pglevy.github.io/web-tools/github-social-preview.html)**: View the social preview image for any GitHub repository. See how your repo will appear when shared on social media.
 - **[Screenshot Generator](https://pglevy.github.io/web-tools/screenshot-generator.html)**: Create beautiful screenshots with customizable window frames, backgrounds, shadows, and padding. Paste, drop, or upload images to generate styled screenshots instantly.
 
 ## Philosophy
