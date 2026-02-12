@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Context Decision Tree</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stone-50: #fafaf9;
+            --stone-100: #f5f5f4;
+            --stone-200: #e7e5e4;
+            --stone-300: #d6d3d1;
+            --stone-400: #a8a29e;
+            --stone-500: #78716c;
+            --stone-600: #57534e;
+            --stone-700: #44403c;
+            --stone-800: #292524;
+            --stone-900: #1c1917;
+            --amber-400: #fbbf24;
+            --amber-500: #f59e0b;
+            --amber-600: #d97706;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Work Sans', -apple-system, system-ui, sans-serif;
+            background: var(--stone-100);
+            color: var(--stone-900);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 1000;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='3.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            margin-bottom: 5rem;
+            border-bottom: 3px solid var(--stone-900);
+            padding-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(3rem, 8vw, 5.5rem);
+            font-weight: 900;
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            color: var(--stone-900);
+        }
+
+        .subtitle {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--stone-500);
+            font-weight: 500;
+        }
+
+        .principle {
+            background: var(--stone-900);
+            color: var(--stone-50);
+            padding: 2rem 2.5rem;
+            margin-bottom: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .principle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 100%;
+            background: var(--amber-400);
+        }
+
+        .principle strong {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: block;
+            margin-bottom: 0.75rem;
+            color: var(--amber-400);
+        }
+
+        .principle-text {
+            font-size: 1.15rem;
+            line-height: 1.7;
+            font-weight: 400;
+        }
+
+        .decision-section {
+            margin-bottom: 5rem;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .question {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--stone-900);
+            line-height: 1.2;
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .question::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 80px;
+            height: 4px;
+            background: var(--amber-400);
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .option {
+            background: var(--stone-50);
+            border: 2px solid var(--stone-200);
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: var(--amber-400);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 0;
+        }
+
+        .option:hover::before {
+            width: 6px;
+        }
+
+        .option:hover {
+            border-color: var(--stone-400);
+            transform: translateX(4px);
+            background: white;
+        }
+
+        .option.selected {
+            border-color: var(--stone-900);
+            background: white;
+            box-shadow: 8px 8px 0 var(--stone-900);
+        }
+
+        .option.selected::before {
+            width: 6px;
+        }
+
+        .option-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .option h3 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            color: var(--stone-900);
+        }
+
+        .option p {
+            color: var(--stone-600);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .result {
+            background: white;
+            border: 3px solid var(--stone-900);
+            padding: 3rem;
+            margin-top: 3rem;
+            display: none;
+            animation: slideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            position: relative;
+            box-shadow: 12px 12px 0 var(--stone-900);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: var(--amber-400);
+        }
+
+        .result h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            margin-top: 0.5rem;
+            color: var(--stone-900);
+        }
+
+        .result .description {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            color: var(--stone-700);
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--stone-200);
+        }
+
+        .result .connection-note {
+            background: var(--amber-400);
+            color: var(--stone-900);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--stone-900);
+            font-weight: 500;
+        }
+
+        .result .connection-note strong {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .result .use-cases {
+            margin-bottom: 2rem;
+        }
+
+        .result .use-cases h3 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
+            color: var(--stone-700);
+        }
+
+        .result ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .result li {
+            padding: 0.75rem 0 0.75rem 2rem;
+            position: relative;
+            margin-left: 0.5rem;
+            color: var(--stone-700);
+            line-height: 1.7;
+        }
+
+        .result li:before {
+            content: '→';
+            position: absolute;
+            left: -1rem;
+            font-weight: 600;
+            color: var(--amber-500);
+        }
+
+        .reset-btn {
+            background: var(--stone-900);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .reset-btn:hover {
+            background: var(--stone-700);
+            transform: translateY(-2px);
+            box-shadow: 4px 4px 0 var(--amber-400);
+        }
+
+        .quick-reference {
+            margin-top: 6rem;
+            padding-top: 3rem;
+            border-top: 3px solid var(--stone-900);
+        }
+
+        .quick-reference h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            margin-bottom: 3rem;
+            color: var(--stone-900);
+        }
+
+        .reference-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .reference-card {
+            background: var(--stone-50);
+            padding: 2rem;
+            border-left: 6px solid var(--stone-900);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .reference-card:hover {
+            background: white;
+            border-left-width: 10px;
+            transform: translateX(4px);
+        }
+
+        .reference-card h3 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            color: var(--stone-900);
+        }
+
+        .reference-card .scope {
+            display: inline-block;
+            background: var(--amber-400);
+            color: var(--stone-900);
+            padding: 0.25rem 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .reference-card .when {
+            color: var(--stone-600);
+            font-size: 0.9rem;
+            font-style: italic;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--stone-200);
+        }
+
+        .reference-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .reference-card li {
+            padding: 0.4rem 0 0.4rem 1.5rem;
+            position: relative;
+            font-size: 0.95rem;
+            color: var(--stone-700);
+            line-height: 1.5;
+        }
+
+        .reference-card li:before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--amber-500);
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1.5rem;
+            }
+
+            header {
+                margin-bottom: 3rem;
+                padding-bottom: 2rem;
+            }
+
+            .question {
+                margin-bottom: 2rem;
+            }
+
+            .options {
+                gap: 1.5rem;
+            }
+
+            .result {
+                padding: 2rem;
+                box-shadow: 8px 8px 0 var(--stone-900);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+    <div class="container">
+        <header>
+            <h1>AI Context<br>Decision Tree</h1>
+            <p class="subtitle">Choose the Right Tool for the Job</p>
+        </header>
+
+        <div class="principle">
+            <strong>Core Principle</strong>
+            <div class="principle-text">If you would tell a human or a machine about it more than once, put it in the appropriate context mechanism. Don't repeat yourself—codify it.</div>
+        </div>
+
+        <div id="decision-tree">
+            <!-- Step 1: What are you trying to do? -->
+            <div class="decision-section" id="step1">
+                <div class="question">What are you trying to accomplish?</div>
+                <div class="options">
+                    <div class="option" data-next="step2-instructions">
+                        <div class="option-content">
+                            <h3>Give Instructions</h3>
+                            <p>Define how the AI should behave, what tone to use, or general guidelines</p>
+                        </div>
+                    </div>
+                    <div class="option" data-next="step2-tools">
+                        <div class="option-content">
+                            <h3>Add Capabilities</h3>
+                            <p>Connect to external tools, APIs, or data sources</p>
+                        </div>
+                    </div>
+                    <div class="option" data-next="step2-automation">
+                        <div class="option-content">
+                            <h3>Automate Actions</h3>
+                            <p>Trigger behaviors automatically based on events or conditions</p>
+                        </div>
+                    </div>
+                    <div class="option" data-next="step2-templates">
+                        <div class="option-content">
+                            <h3>Save Reusable Patterns</h3>
+                            <p>Store prompts, workflows, or agent configurations</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Instructions Branch -->
+            <div class="decision-section hidden" id="step2-instructions">
+                <div class="question">Who should these instructions apply to?</div>
+                <div class="options">
+                    <div class="option" data-result="steering-file">
+                        <div class="option-content">
+                            <h3>Every Conversation I Have</h3>
+                            <p>Personal preferences that should always apply to my AI interactions</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="agents-md">
+                        <div class="option-content">
+                            <h3>Specific AI Agents</h3>
+                            <p>Instructions for specialized agents doing particular jobs</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="skill">
+                        <div class="option-content">
+                            <h3>Specific Tasks or Domains</h3>
+                            <p>Expertise that can be invoked when needed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Tools Branch -->
+            <div class="decision-section hidden" id="step2-tools">
+                <div class="question">What kind of capability do you need?</div>
+                <div class="options">
+                    <div class="option" data-result="mcp-server">
+                        <div class="option-content">
+                            <h3>External Systems</h3>
+                            <p>Connect to APIs, databases, or external services via Model Context Protocol</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="power">
+                        <div class="option-content">
+                            <h3>Smart, Contextual Activation</h3>
+                            <p>Dynamically activate capabilities based on conversation keywords (Kiro Powers)</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="skill">
+                        <div class="option-content">
+                            <h3>Domain Expertise</h3>
+                            <p>Specialized knowledge or multi-step workflows</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Automation Branch -->
+            <div class="decision-section hidden" id="step2-automation">
+                <div class="question">When should this automation trigger?</div>
+                <div class="options">
+                    <div class="option" data-result="hook">
+                        <div class="option-content">
+                            <h3>On Specific Events</h3>
+                            <p>React to triggers like new emails, schedule, or system events</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="agents-md">
+                        <div class="option-content">
+                            <h3>Continuous Background</h3>
+                            <p>Always-on agents monitoring and acting independently</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="power">
+                        <div class="option-content">
+                            <h3>On-Demand Actions</h3>
+                            <p>Manual invocation of pre-configured workflows</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Templates Branch -->
+            <div class="decision-section hidden" id="step2-templates">
+                <div class="question">What do you want to reuse?</div>
+                <div class="options">
+                    <div class="option" data-result="steering-file">
+                        <div class="option-content">
+                            <h3>My Personal Preferences</h3>
+                            <p>How I want the AI to always interact with me</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="skill">
+                        <div class="option-content">
+                            <h3>Task-Specific Expertise</h3>
+                            <p>Best practices, workflows, or specialized knowledge</p>
+                        </div>
+                    </div>
+                    <div class="option" data-result="agents-md">
+                        <div class="option-content">
+                            <h3>Complete Agent Setup</h3>
+                            <p>Full agent configuration with role, goals, and behaviors</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="result" id="result-steering-file">
+            <h2>Steering File</h2>
+            <div class="description">
+                Your personal AI preferences that apply to every conversation. Think of this as your "AI knows me" file—tone preferences, communication style, recurring contexts about your role, team, or projects.
+            </div>
+            <div class="use-cases">
+                <h3>Perfect For:</h3>
+                <ul>
+                    <li>Your communication style preferences (formal, casual, concise, detailed)</li>
+                    <li>Your role, team structure, and recurring context</li>
+                    <li>Personal preferences you'd tell every AI assistant</li>
+                    <li>Default behaviors (always cite sources, avoid certain phrases)</li>
+                    <li>Information you reference constantly (company values, your workflow)</li>
+                </ul>
+            </div>
+            <button class="reset-btn" onclick="resetTree()">Start Over</button>
+        </div>
+
+        <div class="result" id="result-agents-md">
+            <h2>agents.md File</h2>
+            <div class="description">
+                Configuration for specialized AI agents that run autonomously or in specific contexts. Each agent has a defined role, responsibilities, and operational parameters. These are your AI employees.
+            </div>
+            <div class="use-cases">
+                <h3>Perfect For:</h3>
+                <ul>
+                    <li>Background agents that monitor and respond (email triager, report generator)</li>
+                    <li>Specialized assistants with specific jobs (code reviewer, documentation writer)</li>
+                    <li>Agents that need their own identity, goals, and decision-making criteria</li>
+                    <li>Multi-agent systems where different AIs handle different domains</li>
+                    <li>Agentic workflows that run independently</li>
+                </ul>
+            </div>
+            <button class="reset-btn" onclick="resetTree()">Start Over</button>
+        </div>
+
+        <div class="result" id="result-power">
+            <h2>Kiro Power</h2>
+            <div class="connection-note">
+                <strong>Key Advantage</strong>
+                Instead of loading all MCP tools at once, Powers activate dynamically based on keywords in your conversation. This keeps your AI fast and focused while still having access to everything it needs.
+            </div>
+            <div class="description">
+                Pre-built or custom capabilities within Kiro that extend what the AI can do. Powers are action-oriented—they give the AI new abilities to interact with systems, data, or perform operations. They're essentially smart wrappers around MCP servers that only load when relevant.
+            </div>
+            <div class="use-cases">
+                <h3>Perfect For:</h3>
+                <ul>
+                    <li>Built-in Kiro integrations (Slack, calendar, project management)</li>
+                    <li>Custom actions specific to your Kiro setup</li>
+                    <li>One-off or on-demand capabilities you invoke as needed</li>
+                    <li>Team-wide capabilities everyone should have access to</li>
+                    <li>Actions that need to happen within Kiro's ecosystem</li>
+                    <li>Making MCP tools available without the overhead of loading everything upfront</li>
+                </ul>
+            </div>
+            <button class="reset-btn" onclick="resetTree()">Start Over</button>
+        </div>
+
+        <div class="result" id="result-skill">
+            <h2>Skill</h2>
+            <div class="description">
+                Packaged domain expertise, best practices, or specialized workflows. Skills are knowledge modules that can be invoked when needed, providing the AI with deep context and instructions for specific tasks or domains.
+            </div>
+            <div class="use-cases">
+                <h3>Perfect For:</h3>
+                <ul>
+                    <li>Domain-specific knowledge (code review standards, design systems, compliance rules)</li>
+                    <li>Multi-step workflows with detailed instructions</li>
+                    <li>Best practices and team conventions</li>
+                    <li>Task-specific guidance that's reused across projects</li>
+                    <li>Teachable expertise that others on your team should also use</li>
+                </ul>
+            </div>
+            <button class="reset-btn" onclick="resetTree()">Start Over</button>
+        </div>
+
+        <div class="result" id="result-mcp-server">
+            <h2>MCP Server</h2>
+            <div class="description">
+                Model Context Protocol servers that connect AI to external systems, APIs, or data sources. MCP servers are the bridge between your AI and the outside world—enabling reads, writes, and actions in other systems.
+            </div>
+            <div class="connection-note">
+                <strong>Relationship to Powers</strong>
+                MCP servers provide the underlying functionality, while Kiro Powers offer a way to access those MCP tools dynamically. Think of MCP as the raw capability and Powers as the smart activation layer.
+            </div>
+            <div class="use-cases">
+                <h3>Perfect For:</h3>
+                <ul>
+                    <li>Connecting to external APIs (GitHub, Linear, databases)</li>
+                    <li>Reading/writing to file systems or cloud storage</li>
+                    <li>Integrating with proprietary or custom internal tools</li>
+                    <li>Giving AI access to real-time data sources</li>
+                    <li>Building custom integrations not available as Powers</li>
+                </ul>
+            </div>
+            <button class="reset-btn" onclick="resetTree()">Start Over</button>
+        </div>
+
+        <div class="result" id="result-hook">
+            <h2>Hook</h2>
+            <div class="description">
+                Event-triggered automations that activate AI workflows based on specific conditions or schedules. Hooks are your "if this, then AI does that" automations.
+            </div>
+            <div class="use-cases">
+                <h3>Perfect For:</h3>
+                <ul>
+                    <li>Responding to events (new email arrives, PR created, Slack mention)</li>
+                    <li>Scheduled actions (daily summaries, weekly reports, periodic checks)</li>
+                    <li>Condition-based triggers (if priority email, then escalate)</li>
+                    <li>Chaining workflows (when agent A completes, agent B starts)</li>
+                    <li>Reactive automations that need to happen without human intervention</li>
+                </ul>
+            </div>
+            <button class="reset-btn" onclick="resetTree()">Start Over</button>
+        </div>
+
+        <!-- Quick Reference -->
+        <div class="quick-reference">
+            <h2>Quick Reference</h2>
+            <div class="reference-grid">
+                <div class="reference-card">
+                    <h3>Steering File</h3>
+                    <span class="scope">Personal</span>
+                    <div class="when">Always active</div>
+                    <ul>
+                        <li>Your AI communication style</li>
+                        <li>Personal context & preferences</li>
+                        <li>Tone and format defaults</li>
+                    </ul>
+                </div>
+
+                <div class="reference-card">
+                    <h3>agents.md</h3>
+                    <span class="scope">Team/Personal</span>
+                    <div class="when">Runs autonomously or on-demand</div>
+                    <ul>
+                        <li>Specialized AI assistants</li>
+                        <li>Background monitoring agents</li>
+                        <li>Multi-agent systems</li>
+                    </ul>
+                </div>
+
+                <div class="reference-card">
+                    <h3>Power</h3>
+                    <span class="scope">Team</span>
+                    <div class="when">Activates on keywords</div>
+                    <ul>
+                        <li>Kiro integrations</li>
+                        <li>Dynamic MCP activation</li>
+                        <li>Context-aware tooling</li>
+                    </ul>
+                </div>
+
+                <div class="reference-card">
+                    <h3>Skill</h3>
+                    <span class="scope">Team</span>
+                    <div class="when">Called for specific tasks</div>
+                    <ul>
+                        <li>Domain expertise</li>
+                        <li>Best practices</li>
+                        <li>Multi-step workflows</li>
+                    </ul>
+                </div>
+
+                <div class="reference-card">
+                    <h3>MCP Server</h3>
+                    <span class="scope">Team/Org</span>
+                    <div class="when">Available as tools</div>
+                    <ul>
+                        <li>External API connections</li>
+                        <li>Database access</li>
+                        <li>Custom integrations</li>
+                    </ul>
+                </div>
+
+                <div class="reference-card">
+                    <h3>Hook</h3>
+                    <span class="scope">Team/Personal</span>
+                    <div class="when">Triggered by events</div>
+                    <ul>
+                        <li>Event-based automation</li>
+                        <li>Scheduled tasks</li>
+                        <li>Reactive workflows</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function resetTree() {
+            document.querySelectorAll('.result').forEach(r => {
+                r.style.display = 'none';
+            });
+            
+            document.querySelectorAll('.decision-section').forEach(s => {
+                s.classList.add('hidden');
+            });
+            
+            document.getElementById('step1').classList.remove('hidden');
+            
+            document.querySelectorAll('.option').forEach(o => {
+                o.classList.remove('selected');
+            });
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.querySelectorAll('.option').forEach(option => {
+            option.addEventListener('click', function() {
+                const nextStep = this.getAttribute('data-next');
+                const result = this.getAttribute('data-result');
+                
+                this.parentElement.querySelectorAll('.option').forEach(o => {
+                    o.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                
+                if (nextStep) {
+                    document.querySelectorAll('.decision-section').forEach(s => {
+                        s.classList.add('hidden');
+                    });
+                    
+                    document.getElementById(nextStep).classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        document.getElementById(nextStep).scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }, 100);
+                }
+                
+                if (result) {
+                    document.querySelectorAll('.result').forEach(r => {
+                        r.style.display = 'none';
+                    });
+                    
+                    const resultElement = document.getElementById('result-' + result);
+                    resultElement.style.display = 'block';
+                    
+                    setTimeout(() => {
+                        resultElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }, 100);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
