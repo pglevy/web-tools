@@ -522,8 +522,8 @@
                     </div>
                     <div class="option" data-result="agents-md">
                         <div class="option-content">
-                            <h3>Specific AI Agents</h3>
-                            <p>Instructions for specialized agents doing particular jobs</p>
+                            <h3>Any Coding Agent in This Repo</h3>
+                            <p>Build steps, test commands, conventions, and project context for agents working in your codebase</p>
                         </div>
                     </div>
                     <div class="option" data-result="skill">
@@ -572,8 +572,8 @@
                     </div>
                     <div class="option" data-result="agents-md">
                         <div class="option-content">
-                            <h3>Continuous Background</h3>
-                            <p>Always-on agents monitoring and acting independently</p>
+                            <h3>Project-Level Agent Context</h3>
+                            <p>Repo-specific instructions any coding agent should follow when working here</p>
                         </div>
                     </div>
                     <div class="option" data-result="power">
@@ -603,8 +603,8 @@
                     </div>
                     <div class="option" data-result="agents-md">
                         <div class="option-content">
-                            <h3>Complete Agent Setup</h3>
-                            <p>Full agent configuration with role, goals, and behaviors</p>
+                            <h3>Repo-Level Agent Instructions</h3>
+                            <p>Build commands, conventions, and project context that any coding agent should know</p>
                         </div>
                     </div>
                 </div>
@@ -615,14 +615,14 @@
         <div class="result" id="result-steering-file">
             <h2>Steering File</h2>
             <div class="description">
-                Your personal AI preferences that apply to every conversation. Think of this as your "AI knows me" file—tone preferences, communication style, recurring contexts about your role, team, or projects.
+                Your personal AI preferences that apply to either all or select conversations. Think of this as your "AI knows me" file—tone preferences, communication style, recurring contexts about your role, team, or projects.
             </div>
             <div class="use-cases">
                 <h3>Perfect For:</h3>
                 <ul>
                     <li>Your communication style preferences (formal, casual, concise, detailed)</li>
                     <li>Your role, team structure, and recurring context</li>
-                    <li>Personal preferences you'd tell every AI assistant</li>
+                    <li>Personal preferences you'd tell every AI assistant (in certain situations)</li>
                     <li>Default behaviors (always cite sources, avoid certain phrases)</li>
                     <li>Information you reference constantly (company values, your workflow)</li>
                 </ul>
@@ -633,16 +633,20 @@
         <div class="result" id="result-agents-md">
             <h2>agents.md File</h2>
             <div class="description">
-                Configuration for specialized AI agents that run autonomously or in specific contexts. Each agent has a defined role, responsibilities, and operational parameters. These are your AI employees.
+                A predictable, agent-focused companion to your README. While READMEs are for humans (quick starts, project descriptions, contribution guidelines), AGENTS.md contains the detailed, precise context that coding agents need to work effectively in your repo — build steps, test commands, coding conventions, and project-specific instructions that would clutter a README or aren't relevant to human contributors.
+            </div>
+            <div class="connection-note">
+                <strong>Relationship to README</strong>
+                AGENTS.md doesn't replace your README — it complements it. READMEs stay concise for humans. AGENTS.md gives agents a clear, predictable place for the extra detail they need.
             </div>
             <div class="use-cases">
                 <h3>Perfect For:</h3>
                 <ul>
-                    <li>Background agents that monitor and respond (email triager, report generator)</li>
-                    <li>Specialized assistants with specific jobs (code reviewer, documentation writer)</li>
-                    <li>Agents that need their own identity, goals, and decision-making criteria</li>
-                    <li>Multi-agent systems where different AIs handle different domains</li>
-                    <li>Agentic workflows that run independently</li>
+                    <li>Build, lint, and test commands agents should run (and common flags or gotchas)</li>
+                    <li>Project structure explanations and where key code lives</li>
+                    <li>Coding conventions and style rules specific to the repo</li>
+                    <li>Dependency or environment setup steps agents need to know</li>
+                    <li>Repo-specific workflows that aren't obvious from the code alone</li>
                 </ul>
             </div>
             <button class="reset-btn" onclick="resetTree()">Start Over</button>
@@ -736,22 +740,22 @@
                 <div class="reference-card">
                     <h3>Steering File</h3>
                     <span class="scope">Personal</span>
-                    <div class="when">Always active</div>
+                    <div class="when">Always active or on-demand</div>
                     <ul>
                         <li>Your AI communication style</li>
-                        <li>Personal context & preferences</li>
+                        <li>Personal and/or project context & preferences</li>
                         <li>Tone and format defaults</li>
                     </ul>
                 </div>
 
                 <div class="reference-card">
                     <h3>agents.md</h3>
-                    <span class="scope">Team/Personal</span>
-                    <div class="when">Runs autonomously or on-demand</div>
+                    <span class="scope">Project/Team</span>
+                    <div class="when">Read by agents working in your repo</div>
                     <ul>
-                        <li>Specialized AI assistants</li>
-                        <li>Background monitoring agents</li>
-                        <li>Multi-agent systems</li>
+                        <li>Build, test & lint commands</li>
+                        <li>Coding conventions & style rules</li>
+                        <li>Project structure & repo context</li>
                     </ul>
                 </div>
 
