@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Analyze your GitHub repos, score them for staleness, and archive the ones you no longer need. A visual repo cleanup tool.">
+    <title>Repo Archiver</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0c0e13;
+            --bg-surface: #14171e;
+            --bg-elevated: #1c2029;
+            --bg-hover: #242833;
+            --border: #2a2e3a;
+            --border-focus: #4a6fa5;
+            --text-primary: #e2e4e9;
+            --text-secondary: #8b8fa4;
+            --text-muted: #5c6078;
+            --accent: #6b8acd;
+            --accent-glow: rgba(107, 138, 205, 0.15);
+            --archive-red: #c9544d;
+            --archive-red-bg: rgba(201, 84, 77, 0.08);
+            --archive-red-border: rgba(201, 84, 77, 0.25);
+            --maybe-amber: #c9a14d;
+            --maybe-amber-bg: rgba(201, 161, 77, 0.08);
+            --maybe-amber-border: rgba(201, 161, 77, 0.25);
+            --keep-green: #5daa68;
+            --keep-green-bg: rgba(93, 170, 104, 0.08);
+            --keep-green-border: rgba(93, 170, 104, 0.25);
+            --success: #5daa68;
+            --error: #c9544d;
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', 'DM Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-display);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Subtle grid texture */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(107, 138, 205, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(107, 138, 205, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 48px;
+        }
+
+        .header h1 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .header h1 span {
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            max-width: 520px;
+        }
+
+        /* Auth Section */
+        .auth-section {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .auth-section label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .input-row input[type="text"],
+        .input-row input[type="password"] {
+            flex: 1;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-row input:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .input-row input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .btn {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #7d9ad6;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-danger {
+            background: var(--archive-red);
+            color: #fff;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #d4635c;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover:not(:disabled) {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Token info */
+        .token-info {
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .token-info a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .token-info a:hover {
+            text-decoration: underline;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+        }
+
+        .stat-block {
+            flex: 1;
+            padding: 20px 24px;
+            text-align: center;
+            position: relative;
+        }
+
+        .stat-block + .stat-block::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            height: 60%;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .stat-number {
+            font-family: var(--font-mono);
+            font-size: 1.8rem;
+            font-weight: 600;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+
+        .stat-block.archive .stat-number { color: var(--archive-red); }
+        .stat-block.maybe .stat-number { color: var(--maybe-amber); }
+        .stat-block.keep .stat-number { color: var(--keep-green); }
+        .stat-block.total .stat-number { color: var(--text-secondary); }
+
+        /* Filter tabs */
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-tab {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-tab:hover { background: var(--bg-hover); }
+        .filter-tab.active { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-focus); }
+
+        .filter-tab.archive.active { border-color: var(--archive-red-border); color: var(--archive-red); background: var(--archive-red-bg); }
+        .filter-tab.maybe.active { border-color: var(--maybe-amber-border); color: var(--maybe-amber); background: var(--maybe-amber-bg); }
+        .filter-tab.keep.active { border-color: var(--keep-green-border); color: var(--keep-green); background: var(--keep-green-bg); }
+
+        .filter-spacer { flex: 1; }
+
+        .search-input {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            outline: none;
+            width: 200px;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--border-focus);
+        }
+
+        .search-input::placeholder { color: var(--text-muted); }
+
+        /* Repo list */
+        .repo-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .repo-row {
+            display: grid;
+            grid-template-columns: 36px 1fr 70px 70px 100px 36px;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: all 0.15s;
+            cursor: default;
+        }
+
+        .repo-row:hover {
+            background: var(--bg-elevated);
+            border-color: #353948;
+        }
+
+        .repo-row.selected {
+            border-color: var(--archive-red-border);
+            background: var(--archive-red-bg);
+        }
+
+        .repo-checkbox {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--archive-red);
+            cursor: pointer;
+        }
+
+        .repo-name {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .repo-name a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .repo-name a:hover {
+            color: var(--accent);
+        }
+
+        .repo-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+
+        .repo-meta {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        .repo-badge {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-align: center;
+            width: fit-content;
+            justify-self: end;
+        }
+
+        .badge-archive { color: var(--archive-red); background: var(--archive-red-bg); border: 1px solid var(--archive-red-border); }
+        .badge-maybe { color: var(--maybe-amber); background: var(--maybe-amber-bg); border: 1px solid var(--maybe-amber-border); }
+        .badge-keep { color: var(--keep-green); background: var(--keep-green-bg); border: 1px solid var(--keep-green-border); }
+
+        .repo-score {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* Score bar */
+        .score-dots {
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+        }
+
+        .score-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .score-dot.filled { background: var(--archive-red); }
+        .score-dot.filled.low { background: var(--keep-green); }
+        .score-dot.filled.mid { background: var(--maybe-amber); }
+
+        /* Action bar */
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(12px);
+        }
+
+        .action-bar.visible {
+            transform: translateY(0);
+        }
+
+        .action-bar .selected-count {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .action-bar .selected-count strong {
+            color: var(--archive-red);
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 80px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Status messages */
+        .status-msg {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .status-msg.error {
+            background: var(--archive-red-bg);
+            border: 1px solid var(--archive-red-border);
+            color: var(--archive-red);
+        }
+
+        .status-msg.success {
+            background: var(--keep-green-bg);
+            border: 1px solid var(--keep-green-border);
+            color: var(--keep-green);
+        }
+
+        .status-msg.info {
+            background: var(--accent-glow);
+            border: 1px solid rgba(107, 138, 205, 0.25);
+            color: var(--accent);
+        }
+
+        /* Confirm modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+            transform: scale(0.95);
+            transition: transform 0.2s;
+        }
+
+        .modal-overlay.visible .modal {
+            transform: scale(1);
+        }
+
+        .modal h3 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .modal p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .modal .repo-confirm-list {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-deep);
+            border-radius: 6px;
+            padding: 12px;
+            margin: 16px 0;
+        }
+
+        .modal .repo-confirm-list div {
+            padding: 2px 0;
+        }
+
+        .modal .btn-row {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* Progress */
+        .progress-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 16px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 24px 16px 100px; }
+            .header h1 { font-size: 1.5rem; }
+            .stats-bar { flex-wrap: wrap; }
+            .stat-block { min-width: 45%; }
+            .repo-row {
+                grid-template-columns: 30px 1fr 60px;
+                gap: 8px;
+            }
+            .repo-meta.stars, .repo-score, .repo-badge { display: none; }
+            .input-row { flex-direction: column; }
+            .search-input { width: 100%; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        .hidden { display: none; }
+
+        /* Fork tag */
+        .fork-tag {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: var(--bg-hover);
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Select all row */
+        .select-all-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            margin-bottom: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Repo Archiver <span>/ cleanup</span></h1>
+            <p>Scan your GitHub repos, score them for staleness, and archive the ones collecting dust.</p>
+        </div>
+
+        <!-- Auth -->
+        <div class="auth-section">
+            <label for="tokenInput">GitHub Token</label>
+            <div class="input-row">
+                <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+                <input type="text" id="usernameInput" placeholder="username" style="max-width: 180px;">
+                <button class="btn btn-primary" id="scanBtn" onclick="scanRepos()">
+                    Scan Repos
+                </button>
+            </div>
+            <div class="token-info">
+                Needs a token with <code>repo</code> scope.
+                <a href="https://github.com/settings/tokens/new?scopes=repo&description=Repo+Archiver" target="_blank" rel="noopener">Create one →</a>
+                &nbsp;·&nbsp; Token stays in your browser, never sent anywhere else.
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div id="statusArea"></div>
+
+        <!-- Stats -->
+        <div class="stats-bar hidden" id="statsBar">
+            <div class="stat-block total">
+                <div class="stat-number" id="statTotal">0</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-block archive">
+                <div class="stat-number" id="statArchive">0</div>
+                <div class="stat-label">Archive</div>
+            </div>
+            <div class="stat-block maybe">
+                <div class="stat-number" id="statMaybe">0</div>
+                <div class="stat-label">Maybe</div>
+            </div>
+            <div class="stat-block keep">
+                <div class="stat-number" id="statKeep">0</div>
+                <div class="stat-label">Keep</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar hidden" id="filterBar">
+            <button class="filter-tab active" data-filter="all" onclick="setFilter('all', this)">All</button>
+            <button class="filter-tab archive" data-filter="ARCHIVE" onclick="setFilter('ARCHIVE', this)">Archive</button>
+            <button class="filter-tab maybe" data-filter="MAYBE" onclick="setFilter('MAYBE', this)">Maybe</button>
+            <button class="filter-tab keep" data-filter="KEEP" onclick="setFilter('KEEP', this)">Keep</button>
+            <span class="filter-spacer"></span>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search repos..." oninput="applyFilters()">
+        </div>
+
+        <!-- Repo list -->
+        <div id="repoArea"></div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar" id="actionBar">
+        <span class="selected-count"><strong id="selectedCount">0</strong> repos selected</span>
+        <button class="btn btn-danger" onclick="showConfirmModal()">Archive Selected</button>
+        <button class="btn btn-ghost" onclick="clearSelection()">Clear</button>
+    </div>
+
+    <!-- Confirm modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h3>Confirm Archive</h3>
+            <p>These repos will be archived on GitHub. You can unarchive them later if needed.</p>
+            <div class="repo-confirm-list" id="confirmList"></div>
+            <div class="progress-bar hidden" id="archiveProgress">
+                <div class="progress-fill" id="archiveProgressFill"></div>
+            </div>
+            <div id="archiveStatus"></div>
+            <div class="btn-row">
+                <button class="btn btn-ghost" id="cancelArchiveBtn" onclick="hideConfirmModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirmArchiveBtn" onclick="executeArchive()">Archive All</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        // ── State ──────────────────────────────────────────────
+        let allRepos = [];
+        let currentFilter = 'all';
+        let selectedRepos = new Set();
+
+        // ── GitHub API ─────────────────────────────────────────
+        function getToken() { return document.getElementById('tokenInput').value.trim(); }
+        function getUsername() { return document.getElementById('usernameInput').value.trim(); }
+
+        async function ghFetch(url, opts = {}) {
+            const token = getToken();
+            const res = await fetch(url, {
+                ...opts,
+                headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    ...(opts.headers || {})
+                }
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                throw new Error(body.message || `GitHub API error: ${res.status}`);
+            }
+            return res;
+        }
+
+        async function fetchAllRepos(username) {
+            let repos = [];
+            let page = 1;
+            while (true) {
+                const res = await ghFetch(
+                    `https://api.github.com/users/${username}/repos?per_page=100&page=${page}&type=owner`
+                );
+                const batch = await res.json();
+                if (batch.length === 0) break;
+                repos = repos.concat(batch);
+                page++;
+            }
+            // Filter out already-archived repos
+            return repos.filter(r => !r.archived);
+        }
+
+        // ── Scoring ────────────────────────────────────────────
+        function scoreRepo(repo) {
+            let score = 0;
+            const now = new Date();
+            const pushed = new Date(repo.pushed_at);
+            const daysSincePush = (now - pushed) / (1000 * 60 * 60 * 24);
+
+            // Staleness
+            if (daysSincePush > 730) score += 3;       // > 2 years
+            else if (daysSincePush > 365) score += 2;   // > 1 year
+
+            // Fork + stars
+            if (repo.fork && repo.stargazers_count === 0) score += 2;
+            else if (repo.fork) score += 1;
+            else if (repo.stargazers_count === 0) score += 1;
+
+            // No description
+            if (!repo.description) score += 1;
+
+            // Name looks experimental
+            if (/test|experiment|demo|sandbox|poc|trial|tmp|temp|scratch/i.test(repo.name)) score += 1;
+
+            let recommendation;
+            if (score >= 5) recommendation = 'ARCHIVE';
+            else if (score >= 3) recommendation = 'MAYBE';
+            else recommendation = 'KEEP';
+
+            return { score, recommendation };
+        }
+
+        // ── Scan ───────────────────────────────────────────────
+        async function scanRepos() {
+            const token = getToken();
+            const username = getUsername();
+
+            if (!token) return showStatus('Enter a GitHub token.', 'error');
+            if (!username) return showStatus('Enter a GitHub username.', 'error');
+
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Scanning...';
+            showStatus('Fetching repos from GitHub...', 'info');
+
+            try {
+                const repos = await fetchAllRepos(username);
+                allRepos = repos.map(r => {
+                    const { score, recommendation } = scoreRepo(r);
+                    return {
+                        name: r.name,
+                        full_name: r.full_name,
+                        description: r.description || '',
+                        fork: r.fork,
+                        stars: r.stargazers_count,
+                        pushed_at: r.pushed_at,
+                        html_url: r.html_url,
+                        score,
+                        recommendation
+                    };
+                });
+
+                // Sort: ARCHIVE first (high score), then MAYBE, then KEEP
+                allRepos.sort((a, b) => b.score - a.score);
+
+                selectedRepos.clear();
+                clearStatus();
+                renderStats();
+                renderRepos();
+                document.getElementById('statsBar').classList.remove('hidden');
+                document.getElementById('filterBar').classList.remove('hidden');
+            } catch (err) {
+                showStatus(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Scan Repos';
+            }
+        }
+
+        // ── Render ─────────────────────────────────────────────
+        function renderStats() {
+            const counts = { ARCHIVE: 0, MAYBE: 0, KEEP: 0 };
+            allRepos.forEach(r => counts[r.recommendation]++);
+            document.getElementById('statTotal').textContent = allRepos.length;
+            document.getElementById('statArchive').textContent = counts.ARCHIVE;
+            document.getElementById('statMaybe').textContent = counts.MAYBE;
+            document.getElementById('statKeep').textContent = counts.KEEP;
+        }
+
+        function getFilteredRepos() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            return allRepos.filter(r => {
+                if (currentFilter !== 'all' && r.recommendation !== currentFilter) return false;
+                if (search && !r.name.toLowerCase().includes(search) && !r.description.toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        function renderRepos() {
+            const filtered = getFilteredRepos();
+            const area = document.getElementById('repoArea');
+
+            if (filtered.length === 0 && allRepos.length > 0) {
+                area.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>No repos match the current filter.</p></div>`;
+                return;
+            }
+
+            if (allRepos.length === 0) {
+                area.innerHTML = '';
+                return;
+            }
+
+            const html = filtered.map(r => {
+                const checked = selectedRepos.has(r.name) ? 'checked' : '';
+                const selectedClass = selectedRepos.has(r.name) ? 'selected' : '';
+                const pushed = new Date(r.pushed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                const badgeClass = r.recommendation === 'ARCHIVE' ? 'badge-archive' : r.recommendation === 'MAYBE' ? 'badge-maybe' : 'badge-keep';
+                const forkTag = r.fork ? '<span class="fork-tag">fork</span>' : '';
+
+                // Score dots
+                const maxDots = 8;
+                const dotClass = r.score >= 5 ? 'filled' : r.score >= 3 ? 'filled mid' : 'filled low';
+                const dots = Array.from({ length: maxDots }, (_, i) =>
+                    `<span class="score-dot ${i < r.score ? dotClass : ''}"></span>`
+                ).join('');
+
+                return `
+                    <div class="repo-row ${selectedClass}" data-name="${r.name}">
+                        <input type="checkbox" class="repo-checkbox" ${checked} onchange="toggleSelect('${r.name}')">
+                        <div>
+                            <div class="repo-name"><a href="${r.html_url}" target="_blank" rel="noopener">${r.name}</a>${forkTag}</div>
+                            <div class="repo-desc">${r.description || '(no description)'}</div>
+                        </div>
+                        <div class="repo-meta stars">⭐ ${r.stars}</div>
+                        <div class="repo-meta">${pushed}</div>
+                        <div class="repo-score"><div class="score-dots">${dots}</div></div>
+                        <div><span class="repo-badge ${badgeClass}">${r.recommendation}</span></div>
+                    </div>
+                `;
+            }).join('');
+
+            area.innerHTML = html;
+            updateActionBar();
+        }
+
+        // ── Filters ────────────────────────────────────────────
+        function setFilter(filter, el) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            renderRepos();
+        }
+
+        function applyFilters() {
+            renderRepos();
+        }
+
+        // ── Selection ──────────────────────────────────────────
+        function toggleSelect(name) {
+            if (selectedRepos.has(name)) selectedRepos.delete(name);
+            else selectedRepos.add(name);
+            renderRepos();
+        }
+
+        function clearSelection() {
+            selectedRepos.clear();
+            renderRepos();
+        }
+
+        function updateActionBar() {
+            const bar = document.getElementById('actionBar');
+            const count = selectedRepos.size;
+            document.getElementById('selectedCount').textContent = count;
+            if (count > 0) bar.classList.add('visible');
+            else bar.classList.remove('visible');
+        }
+
+        // ── Archive ────────────────────────────────────────────
+        function showConfirmModal() {
+            const list = document.getElementById('confirmList');
+            list.innerHTML = [...selectedRepos].map(n => `<div>• ${n}</div>`).join('');
+            document.getElementById('confirmModal').classList.add('visible');
+            document.getElementById('archiveProgress').classList.add('hidden');
+            document.getElementById('archiveStatus').innerHTML = '';
+            document.getElementById('confirmArchiveBtn').disabled = false;
+            document.getElementById('cancelArchiveBtn').disabled = false;
+        }
+
+        function hideConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('visible');
+        }
+
+        async function executeArchive() {
+            const username = getUsername();
+            const repos = [...selectedRepos];
+            const progressBar = document.getElementById('archiveProgress');
+            const progressFill = document.getElementById('archiveProgressFill');
+            const statusEl = document.getElementById('archiveStatus');
+            const confirmBtn = document.getElementById('confirmArchiveBtn');
+            const cancelBtn = document.getElementById('cancelArchiveBtn');
+
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+            progressBar.classList.remove('hidden');
+
+            let success = 0;
+            let failed = 0;
+
+            for (let i = 0; i < repos.length; i++) {
+                const name = repos[i];
+                const pct = ((i + 1) / repos.length * 100).toFixed(0);
+                progressFill.style.width = pct + '%';
+                statusEl.innerHTML = `<div class="status-msg info" style="margin:8px 0">Archiving ${name}... (${i + 1}/${repos.length})</div>`;
+
+                try {
+                    await ghFetch(`https://api.github.com/repos/${username}/${name}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ archived: true })
+                    });
+                    success++;
+                    // Remove from local data
+                    allRepos = allRepos.filter(r => r.name !== name);
+                    selectedRepos.delete(name);
+                } catch (err) {
+                    failed++;
+                }
+            }
+
+            const msg = failed === 0
+                ? `<div class="status-msg success" style="margin:8px 0">Done. Archived ${success} repo${success !== 1 ? 's' : ''}.</div>`
+                : `<div class="status-msg error" style="margin:8px 0">Archived: ${success} · Failed: ${failed}</div>`;
+            statusEl.innerHTML = msg;
+            confirmBtn.classList.add('hidden');
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Close';
+            cancelBtn.onclick = () => {
+                hideConfirmModal();
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.onclick = hideConfirmModal;
+                confirmBtn.classList.remove('hidden');
+                renderStats();
+                renderRepos();
+            };
+        }
+
+        // ── Status helpers ─────────────────────────────────────
+        function showStatus(msg, type) {
+            document.getElementById('statusArea').innerHTML = `<div class="status-msg ${type}">${msg}</div>`;
+        }
+
+        function clearStatus() {
+            document.getElementById('statusArea').innerHTML = '';
+        }
+
+        // ── Keyboard shortcut: Enter to scan ───────────────────
+        document.querySelectorAll('#tokenInput, #usernameInput').forEach(el => {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') scanRepos();
+            });
+        });
+    </script>
+</body>
+</html>

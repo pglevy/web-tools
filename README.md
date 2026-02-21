@@ -10,6 +10,7 @@ Inspired by [Simon Willison's tools](https://github.com/simonw/tools).
 - **[Coffee Ratio Calculator](https://pglevy.github.io/web-tools/coffee-ratio.html)**: A simple, beautiful coffee ratio calculator to find the perfect coffee-to-water ratio for your brew strength and serving size.
 - **[Color Converter](https://pglevy.github.io/web-tools/color-converter.html)**: Convert colors between HEX, RGB, HSL, and other formats. Supports multiple color spaces with live preview.
 - **[GitHub Social Preview](https://pglevy.github.io/web-tools/github-social-preview.html)**: View the social preview image for any GitHub repository. See how your repo will appear when shared on social media.
+- **[Repo Archiver](https://pglevy.github.io/web-tools/repo-archiver.html)**: Scan your GitHub repos, score them for staleness, and archive the ones collecting dust. A visual repo cleanup tool.
 - **[Screenshot Generator](https://pglevy.github.io/web-tools/screenshot-generator.html)**: Create beautiful screenshots with customizable window frames, backgrounds, shadows, and padding. Paste, drop, or upload images to generate styled screenshots instantly.
 
 ## Philosophy
