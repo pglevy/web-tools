@@ -329,10 +329,9 @@
         }
 
         .repo-row {
-            display: grid;
-            grid-template-columns: 36px 1fr 70px 70px 100px 36px;
-            gap: 12px;
+            display: flex;
             align-items: center;
+            gap: 12px;
             padding: 14px 16px;
             background: var(--bg-surface);
             border: 1px solid var(--border);
@@ -354,8 +353,15 @@
         .repo-checkbox {
             width: 18px;
             height: 18px;
+            flex-shrink: 0;
             accent-color: var(--archive-red);
             cursor: pointer;
+        }
+
+        .repo-info {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .repo-name {
@@ -391,6 +397,9 @@
             font-size: 0.72rem;
             color: var(--text-muted);
             text-align: right;
+            flex-shrink: 0;
+            white-space: nowrap;
+            min-width: 64px;
         }
 
         .repo-badge {
@@ -402,8 +411,9 @@
             padding: 3px 8px;
             border-radius: 4px;
             text-align: center;
-            width: fit-content;
-            justify-self: end;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 68px;
         }
 
         .badge-archive { color: var(--archive-red); background: var(--archive-red-bg); border: 1px solid var(--archive-red-border); }
@@ -415,6 +425,8 @@
             font-size: 0.72rem;
             color: var(--text-muted);
             text-align: center;
+            flex-shrink: 0;
+            min-width: 80px;
         }
 
         /* Score bar */
@@ -609,10 +621,9 @@
             .stats-bar { flex-wrap: wrap; }
             .stat-block { min-width: 45%; }
             .repo-row {
-                grid-template-columns: 30px 1fr 60px;
                 gap: 8px;
             }
-            .repo-meta.stars, .repo-score, .repo-badge { display: none; }
+            .repo-meta.stars, .repo-score { display: none; }
             .input-row { flex-direction: column; }
             .search-input { width: 100%; }
         }
@@ -907,14 +918,14 @@
                 return `
                     <div class="repo-row ${selectedClass}" data-name="${r.name}">
                         <input type="checkbox" class="repo-checkbox" ${checked} onchange="toggleSelect('${r.name}')">
-                        <div>
+                        <div class="repo-info">
                             <div class="repo-name"><a href="${r.html_url}" target="_blank" rel="noopener">${r.name}</a>${forkTag}</div>
                             <div class="repo-desc">${r.description || '(no description)'}</div>
                         </div>
                         <div class="repo-meta stars">⭐ ${r.stars}</div>
                         <div class="repo-meta">${pushed}</div>
                         <div class="repo-score"><div class="score-dots">${dots}</div></div>
-                        <div><span class="repo-badge ${badgeClass}">${r.recommendation}</span></div>
+                        <span class="repo-badge ${badgeClass}">${r.recommendation}</span>
                     </div>
                 `;
             }).join('');
