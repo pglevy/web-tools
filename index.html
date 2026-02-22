@@ -15,7 +15,7 @@
       --surface: #faf9f6;
       --ink: #1a1917;
       --ink-muted: #6b6860;
-      --ink-faint: #b8b5ae;
+      --ink-faint: #767370;
       --border: #e2e0da;
       --shadow: rgba(26, 25, 23, 0.12);
       --shadow-deep: rgba(26, 25, 23, 0.22);
@@ -28,21 +28,15 @@
       --accent-coffee-ink: #bf360c;
       --accent-coffee-dot: #f4511e;
 
-      --accent-color: #e8eaf6;
-      --accent-color-ink: #1a237e;
-      --accent-color-dot: #3949ab;
+      /* Category: Design */
+      --accent-design: #e8eaf6;
+      --accent-design-ink: #1a237e;
+      --accent-design-dot: #3949ab;
 
+      /* Category: GitHub */
       --accent-github: #fce4ec;
       --accent-github-ink: #880e4f;
       --accent-github-dot: #e91e63;
-
-      --accent-repo: #e0f7fa;
-      --accent-repo-ink: #006064;
-      --accent-repo-dot: #00acc1;
-
-      --accent-screenshot: #f3e5f5;
-      --accent-screenshot-ink: #4a148c;
-      --accent-screenshot-dot: #8e24aa;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -272,21 +266,21 @@
     .card--coffee .card-tag { background: var(--accent-coffee); color: var(--accent-coffee-ink); }
     .card--coffee .dot { background: var(--accent-coffee-dot); }
 
-    .card--color .card-icon { background: var(--accent-color); color: var(--accent-color-ink); }
-    .card--color .card-tag { background: var(--accent-color); color: var(--accent-color-ink); }
-    .card--color .dot { background: var(--accent-color-dot); }
+    .card--color .card-icon { background: var(--accent-design); color: var(--accent-design-ink); }
+    .card--color .card-tag { background: var(--accent-design); color: var(--accent-design-ink); }
+    .card--color .dot { background: var(--accent-design-dot); }
 
     .card--github .card-icon { background: var(--accent-github); color: var(--accent-github-ink); }
     .card--github .card-tag { background: var(--accent-github); color: var(--accent-github-ink); }
     .card--github .dot { background: var(--accent-github-dot); }
 
-    .card--repo .card-icon { background: var(--accent-repo); color: var(--accent-repo-ink); }
-    .card--repo .card-tag { background: var(--accent-repo); color: var(--accent-repo-ink); }
-    .card--repo .dot { background: var(--accent-repo-dot); }
+    .card--repo .card-icon { background: var(--accent-github); color: var(--accent-github-ink); }
+    .card--repo .card-tag { background: var(--accent-github); color: var(--accent-github-ink); }
+    .card--repo .dot { background: var(--accent-github-dot); }
 
-    .card--screenshot .card-icon { background: var(--accent-screenshot); color: var(--accent-screenshot-ink); }
-    .card--screenshot .card-tag { background: var(--accent-screenshot); color: var(--accent-screenshot-ink); }
-    .card--screenshot .dot { background: var(--accent-screenshot-dot); }
+    .card--screenshot .card-icon { background: var(--accent-design); color: var(--accent-design-ink); }
+    .card--screenshot .card-tag { background: var(--accent-design); color: var(--accent-design-ink); }
+    .card--screenshot .dot { background: var(--accent-design-dot); }
 
     /* Footer */
     footer {
@@ -346,7 +340,7 @@
 
     <header>
       <p class="header-eyebrow">pglevy / web-tools</p>
-      <h1>Small tools.<br><em>Everyday use.</em></h1>
+      <h1>Small tools. <em>Everyday use.</em></h1>
       <p class="header-desc">A collection of standalone HTML utilities. No build step, no framework — open a file and it works. Inspired by Simon Willison's approach to single-file tools.</p>
     </header>
 
