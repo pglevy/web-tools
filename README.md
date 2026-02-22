@@ -2,7 +2,7 @@
 
 A collection of simple, standalone HTML tools for everyday tasks. Each tool is a single HTML file with no build process required.
 
-Inspired by [Simon Willison's tools](https://github.com/simonw/tools).
+Inspired by [Simon Willison's tools](https://github.com/simonw/tools). See also *[Useful patterns for building HTML tools](https://simonwillison.net/2025/Dec/10/html-tools/)*.
 
 ## Tools
 
