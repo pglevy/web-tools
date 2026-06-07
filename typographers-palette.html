@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A typographer's quick-reference for curly quotes, dashes, and special characters. Click or press a number key to copy the actual symbol to your clipboard.">
+    <title>Typographer's Palette</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --parchment: #faf6f0;
+            --parchment-dark: #f0ebe3;
+            --ink: #2c2420;
+            --ink-light: #5c524a;
+            --ink-faint: #9a8e84;
+            --accent: #8b3a2a;
+            --accent-hover: #a8482f;
+            --rule: #d4c9bc;
+            --rule-light: #e8e0d6;
+            --success: #3d6b4f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Serif 4', Georgia, serif;
+            background: var(--parchment);
+            color: var(--ink);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .page {
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+        /* Header — specimen sheet style */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 28px;
+            border-bottom: 1px solid var(--rule);
+            position: relative;
+        }
+
+        header::before {
+            content: '✦';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: var(--accent);
+            background: var(--parchment);
+            padding: 0 10px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--ink-light);
+            font-style: italic;
+            font-weight: 300;
+        }
+
+        .instructions {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: var(--ink-faint);
+            letter-spacing: 0.03em;
+        }
+
+        /* Two-column symbol grid */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--rule-light);
+            border: 1px solid var(--rule);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .symbol-card {
+            display: grid;
+            grid-template-columns: 52px 1fr 24px;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: white;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            position: relative;
+            user-select: none;
+        }
+
+        .symbol-card:hover {
+            background: var(--parchment);
+        }
+
+        .symbol-card:active {
+            background: var(--parchment-dark);
+        }
+
+        .symbol-card.copied {
+            background: #f0f7f2;
+        }
+
+        .symbol-card.copied .copy-indicator {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Keyboard shortcut badge — subtle, right-aligned */
+        .key-badge {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.6rem;
+            font-weight: 500;
+            color: var(--ink-faint);
+            background: var(--parchment);
+            border: 1px solid var(--rule-light);
+            border-radius: 3px;
+            line-height: 1;
+        }
+
+        /* The large rendered glyph */
+        .glyph {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.6rem;
+            text-align: center;
+            color: var(--accent);
+            line-height: 1;
+            border-right: 1px solid var(--rule-light);
+            padding-right: 10px;
+        }
+
+        /* Info section */
+        .info {
+            min-width: 0;
+        }
+
+        .symbol-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 1px;
+            text-transform: capitalize;
+        }
+
+        .symbol-use {
+            font-size: 0.72rem;
+            color: var(--ink-light);
+            line-height: 1.3;
+        }
+
+        .symbol-entity {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.68rem;
+            color: var(--ink-faint);
+            background: var(--parchment-dark);
+            padding: 2px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+            margin-top: 3px;
+            display: inline-block;
+        }
+
+        /* Copy indicator — overlays the info area */
+        .copy-indicator {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateX(4px) translateY(-50%);
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--success);
+            opacity: 0;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--rule);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--ink-faint);
+            font-style: italic;
+        }
+
+        /* Tooltip on hover */
+        .symbol-card[data-example]::before {
+            content: attr(data-example);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ink);
+            color: var(--parchment);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 10;
+            font-style: italic;
+        }
+
+        .symbol-card:hover[data-example]::before {
+            opacity: 1;
+        }
+
+        /* Responsive — stack to single column on small screens */
+        @media (max-width: 640px) {
+            body {
+                padding: 24px 12px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .symbol-card {
+                grid-template-columns: 48px 1fr 20px;
+                gap: 8px;
+                padding: 12px 14px;
+            }
+
+            .glyph {
+                font-size: 1.4rem;
+            }
+
+            .symbol-card[data-example]::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header>
+            <h1>Typographer&rsquo;s Palette</h1>
+            <p class="subtitle">Proper punctuation, one click away</p>
+            <p class="instructions">Click any row or press its number key to copy the symbol to your clipboard.</p>
+        </header>
+
+        <div class="grid" id="symbolGrid"></div>
+
+        <footer>
+            <p>A quick-reference for the discerning typographer &bull; HTML entities for web &amp; beyond</p>
+        </footer>
+    </div>
+
+    <script>
+        const SYMBOLS = [
+            {
+                symbol: "\u2019",
+                entity: "&rsquo;",
+                name: "apostrophe",
+                use: "Possession and letter replacement",
+                example: "Give back the cat\u2019s toy."
+            },
+            {
+                symbol: "\u2022",
+                entity: "&bull;",
+                name: "bullet",
+                use: "List item or inline separator",
+                example: "555-555-5555 \u2022 me@me.com"
+            },
+            {
+                symbol: "\u00A9",
+                entity: "&copy;",
+                name: "copyright",
+                use: "Indicate ownership of composition",
+                example: "\u00A92024 Philip Levy"
+            },
+            {
+                symbol: "\u201C\u201D",
+                entity: "&ldquo;&rdquo;",
+                name: "double quotes",
+                use: "Attributing text to another source",
+                example: "He said, \u201CShe said.\u201D"
+            },
+            {
+                symbol: "\u2026",
+                entity: "&hellip;",
+                name: "ellipsis",
+                use: "Continuation or missing text",
+                example: "Wait for it\u2026"
+            },
+            {
+                symbol: "\u2014",
+                entity: "&mdash;",
+                name: "em dash",
+                use: "Abrupt break in a sentence",
+                example: "Best of times\u2014no really."
+            },
+            {
+                symbol: "\u2013",
+                entity: "&ndash;",
+                name: "en dash",
+                use: "Range of numbers or dates",
+                example: "Bake for 30\u201340 minutes."
+            },
+            {
+                symbol: "\u00AE",
+                entity: "&reg;",
+                name: "registered trademark",
+                use: "Officially registered with the USPTO",
+                example: "Sosumi, Apple\u00AE"
+            },
+            {
+                symbol: "\u2018\u2019",
+                entity: "&lsquo;&rsquo;",
+                name: "single quotes",
+                use: "Nested quotation or alternative to double",
+                example: "\u2018He said, \u201CShe said.\u201D\u2019"
+            },
+            {
+                symbol: "\u2122",
+                entity: "&trade;",
+                name: "trademark",
+                use: "Trademark pending USPTO approval",
+                example: "AirTunes\u2122 pending."
+            }
+        ];
+
+        const grid = document.getElementById('symbolGrid');
+        const cards = [];
+
+        SYMBOLS.forEach((item, index) => {
+            const num = index + 1;
+            const key = num === 10 ? '0' : String(num);
+
+            const card = document.createElement('div');
+            card.className = 'symbol-card';
+            card.setAttribute('data-example', item.example);
+            card.setAttribute('role', 'button');
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', `Press ${key} or click to copy ${item.name}: ${item.symbol}`);
+
+            card.innerHTML = `
+                <div class="glyph">${item.symbol}</div>
+                <div class="info">
+                    <div class="symbol-name">${item.name}</div>
+                    <div class="symbol-use">${item.use}</div>
+                    <code class="symbol-entity">${item.entity.replace(/&/g, '&amp;')}</code>
+                </div>
+                <div class="key-badge">${key}</div>
+                <div class="copy-indicator">Copied!</div>
+            `;
+
+            card.addEventListener('click', () => copySymbol(card, item.symbol));
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    copySymbol(card, item.symbol);
+                }
+            });
+
+            grid.appendChild(card);
+            cards.push({ card, symbol: item.symbol, key });
+        });
+
+        // Keyboard shortcuts: press number key to copy
+        document.addEventListener('keydown', (e) => {
+            // Ignore if user is in an input/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            // Ignore if modifier keys are held
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+            const match = cards.find(c => c.key === e.key);
+            if (match) {
+                e.preventDefault();
+                copySymbol(match.card, match.symbol);
+            }
+        });
+
+        async function copySymbol(card, symbol) {
+            try {
+                await navigator.clipboard.writeText(symbol);
+                card.classList.add('copied');
+                setTimeout(() => card.classList.remove('copied'), 1200);
+            } catch (err) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = symbol;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                card.classList.add('copied');
+                setTimeout(() => card.classList.remove('copied'), 1200);
+            }
+        }
+    </script>
+</body>
+</html>
