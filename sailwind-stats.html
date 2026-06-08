@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Combined usage dashboard for the Sailwind design system — npm package downloads and jsDelivr token requests.">
+  <title>Sailwind Stats</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #171717;
+      --color-surface: #212121;
+      --color-surface-raised: #424242;
+      --color-border: #616161;
+      --color-text: #FAFAFA;
+      --color-text-muted: #BDBDBD;
+      --color-text-dim: #9E9E9E;
+      --color-npm: #2322F0;
+      --color-npm-light: #6564F5;
+      --color-cdn: #009688;
+      --color-cdn-light: #4DB6AC;
+      --color-accent-gradient: linear-gradient(135deg, #2322F0 0%, #E21496 57%, #FFC107 83%, #FFD948 100%);
+      --radius-sm: 0.25rem;
+      --radius-md: 0.5rem;
+      --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'DM Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 2.5rem;
+    }
+
+    .header-bar {
+      height: 3px;
+      background: var(--color-accent-gradient);
+      border-radius: 2px;
+      margin-bottom: 1.5rem;
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    .header p {
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    /* Metric cards */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-surface-raised);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    .metric-card.npm::before { background: var(--color-npm); }
+    .metric-card.cdn::before { background: var(--color-cdn); }
+    .metric-card.combined::before { background: var(--color-accent-gradient); }
+
+    .metric-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .metric-value.npm { color: var(--color-npm-light); }
+    .metric-value.cdn { color: var(--color-cdn-light); }
+    .metric-value.combined { color: var(--color-text); }
+
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--color-text-dim);
+      margin-top: 0.375rem;
+      font-family: var(--font-mono);
+    }
+
+    /* Chart */
+    .chart-section {
+      background: var(--color-surface);
+      border: 1px solid var(--color-surface-raised);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .chart-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.75rem;
+      color: var(--color-text-dim);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.npm { background: var(--color-npm-light); }
+    .legend-dot.cdn { background: var(--color-cdn-light); }
+
+    .chart-canvas-wrap {
+      height: 320px;
+      position: relative;
+    }
+
+    /* Loading / Error states */
+    .loading-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 320px;
+      color: var(--color-text-dim);
+      font-size: 0.875rem;
+    }
+
+    .error-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--color-text-dim);
+    }
+
+    .error-state h2 {
+      font-size: 1rem;
+      color: #DE0037;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-surface-raised);
+      font-size: 0.75rem;
+      color: var(--color-text-dim);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .footer a {
+      color: var(--color-text-muted);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      color: var(--color-text);
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      .metrics { grid-template-columns: 1fr; }
+      .metric-value { font-size: 1.5rem; }
+      .chart-canvas-wrap { height: 240px; }
+      .footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-bar"></div>
+      <h1>Sailwind Stats</h1>
+      <p>npm package downloads (prototyping) and jsDelivr token requests (mockups) — last 30 days</p>
+    </header>
+
+    <div class="metrics">
+      <div class="metric-card npm">
+        <div class="metric-label">npm Downloads</div>
+        <div class="metric-value npm" id="npm-total">—</div>
+        <div class="metric-sub" id="npm-avg"></div>
+      </div>
+      <div class="metric-card cdn">
+        <div class="metric-label">jsDelivr Requests</div>
+        <div class="metric-value cdn" id="cdn-total">—</div>
+        <div class="metric-sub" id="cdn-avg"></div>
+      </div>
+      <div class="metric-card combined">
+        <div class="metric-label">Combined Total</div>
+        <div class="metric-value combined" id="combined-total">—</div>
+        <div class="metric-sub" id="combined-avg"></div>
+      </div>
+    </div>
+
+    <section class="chart-section">
+      <div class="chart-header">
+        <span class="chart-title">Daily Usage Overlay</span>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-dot npm"></span> npm — prototyping</span>
+          <span class="legend-item"><span class="legend-dot cdn"></span> jsDelivr — mockups</span>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="usageChart"></canvas>
+        <div class="loading-state" id="loading">Loading data…</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Sources: <a href="https://www.npmjs.com/package/@pglevy/sailwind">npm registry</a> · <a href="https://www.jsdelivr.com/package/gh/pglevy/sailwind">jsDelivr</a></span>
+      <a href="javascript:location.reload()">Refresh</a>
+    </footer>
+  </div>
+
+  <script>
+    const fmt = n => n.toLocaleString();
+
+    async function fetchNpm() {
+      const res = await fetch('https://api.npmjs.org/downloads/range/last-month/@pglevy/sailwind');
+      if (!res.ok) throw new Error(`npm API: ${res.status}`);
+      const data = await res.json();
+      const downloads = data.downloads || [];
+      return {
+        labels: downloads.map(d => d.day),
+        values: downloads.map(d => d.downloads),
+        total: downloads.reduce((sum, d) => sum + d.downloads, 0)
+      };
+    }
+
+    async function fetchCdn() {
+      const res = await fetch('https://data.jsdelivr.com/v1/stats/packages/gh/pglevy/sailwind?period=month');
+      if (!res.ok) throw new Error(`jsDelivr API: ${res.status}`);
+      const data = await res.json();
+      const hits = data.hits || data;
+      const datesObj = hits.dates || {};
+      return {
+        labels: Object.keys(datesObj),
+        values: Object.values(datesObj),
+        total: hits.total || 0
+      };
+    }
+
+    function alignDatasets(npm, cdn) {
+      // Build a unified date set from both sources
+      const allDates = new Set([...npm.labels, ...cdn.labels]);
+      const sorted = [...allDates].sort();
+
+      const npmMap = Object.fromEntries(npm.labels.map((d, i) => [d, npm.values[i]]));
+      const cdnMap = Object.fromEntries(cdn.labels.map((d, i) => [d, cdn.values[i]]));
+
+      return {
+        labels: sorted,
+        npmValues: sorted.map(d => npmMap[d] || 0),
+        cdnValues: sorted.map(d => cdnMap[d] || 0)
+      };
+    }
+
+    async function init() {
+      try {
+        const [npm, cdn] = await Promise.all([fetchNpm(), fetchCdn()]);
+        const { labels, npmValues, cdnValues } = alignDatasets(npm, cdn);
+
+        const npmDays = npmValues.filter(v => v > 0).length || labels.length;
+        const cdnDays = cdnValues.filter(v => v > 0).length || labels.length;
+
+        // Update cards
+        document.getElementById('npm-total').textContent = fmt(npm.total);
+        document.getElementById('npm-avg').textContent = `~${fmt(Math.round(npm.total / npmDays))}/day`;
+        document.getElementById('cdn-total').textContent = fmt(cdn.total);
+        document.getElementById('cdn-avg').textContent = `~${fmt(Math.round(cdn.total / cdnDays))}/day`;
+        document.getElementById('combined-total').textContent = fmt(npm.total + cdn.total);
+        document.getElementById('combined-avg').textContent = `~${fmt(Math.round((npm.total + cdn.total) / labels.length))}/day`;
+
+        // Hide loading
+        document.getElementById('loading').style.display = 'none';
+
+        // Render chart
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels.map(d => {
+              const date = new Date(d + 'T00:00:00');
+              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }),
+            datasets: [
+              {
+                label: 'npm downloads',
+                data: npmValues,
+                borderColor: '#6564F5',
+                backgroundColor: 'rgba(101, 100, 245, 0.08)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: '#6564F5'
+              },
+              {
+                label: 'jsDelivr requests',
+                data: cdnValues,
+                borderColor: '#4DB6AC',
+                backgroundColor: 'rgba(77, 182, 172, 0.08)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHoverBackgroundColor: '#4DB6AC'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#212121',
+                borderColor: '#616161',
+                borderWidth: 1,
+                titleColor: '#FAFAFA',
+                bodyColor: '#BDBDBD',
+                padding: 12,
+                bodyFont: { family: 'DM Mono' },
+                callbacks: {
+                  label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(97, 97, 97, 0.3)', drawBorder: false },
+                ticks: {
+                  color: '#9E9E9E',
+                  font: { family: 'DM Mono', size: 10 },
+                  maxTicksLimit: 8
+                }
+              },
+              y: {
+                grid: { color: 'rgba(97, 97, 97, 0.3)', drawBorder: false },
+                ticks: {
+                  color: '#9E9E9E',
+                  font: { family: 'DM Mono', size: 10 },
+                  callback: v => v.toLocaleString()
+                },
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Dashboard error:', err);
+        document.querySelector('.chart-canvas-wrap').innerHTML = `
+          <div class="error-state">
+            <h2>Failed to load data</h2>
+            <p>${err.message}</p>
+          </div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
