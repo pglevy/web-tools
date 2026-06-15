@@ -37,6 +37,10 @@
       --accent-github: #fce4ec;
       --accent-github-ink: #880e4f;
       --accent-github-dot: #e91e63;
+
+      --accent-finance: #fff8e1;
+      --accent-finance-ink: #7a5000;
+      --accent-finance-dot: #E8A838;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -290,6 +294,10 @@
     .card--data .card-tag { background: #e8eaf6; color: #0a0a48; }
     .card--data .dot { background: #6564f5; }
 
+    .card--finance .card-icon { background: var(--accent-finance); color: var(--accent-finance-ink); }
+    .card--finance .card-tag { background: var(--accent-finance); color: var(--accent-finance-ink); }
+    .card--finance .dot { background: var(--accent-finance-dot); }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
@@ -336,6 +344,7 @@
     .tool-card:nth-child(6) { animation: fadeUp 0.45s 0.55s ease both; }
     .tool-card:nth-child(7) { animation: fadeUp 0.45s 0.62s ease both; }
     .tool-card:nth-child(8) { animation: fadeUp 0.45s 0.69s ease both; }
+    .tool-card:nth-child(9) { animation: fadeUp 0.45s 0.76s ease both; }
 
     @media (max-width: 600px) {
       header { padding: 48px 0 40px; }
@@ -483,6 +492,20 @@
           <p class="card-desc">A quick-reference for curly quotes, dashes, and special characters. Click or press a number key to copy the proper symbol to your clipboard.</p>
         </div>
         <span class="card-tag"><span class="dot"></span>Writing</span>
+      </a>
+
+      <a href="pie-calculator.html" class="tool-card card--finance">
+        <div class="card-top">
+          <div class="card-icon">
+            <i class="ph-bold ph-chart-donut"></i>
+          </div>
+          <i class="ph ph-arrow-up-right card-arrow" style="font-size:18px;"></i>
+        </div>
+        <div>
+          <p class="card-title">Pie Calculator</p>
+          <p class="card-desc">Allocate new cash to rebalance your portfolio toward target weights. Visual donut chart with per-slice buy recommendations.</p>
+        </div>
+        <span class="card-tag"><span class="dot"></span>Finance</span>
       </a>
 
     </div>
