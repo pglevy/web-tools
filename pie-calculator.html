@@ -48,7 +48,6 @@
             border: 1px solid #1e2335;
             border-radius: 14px;
             padding: 20px 24px;
-            margin-bottom: 20px;
         }
 
         .label {
@@ -114,6 +113,7 @@
         .num-input-with-prefix input[type="number"] {
             padding-left: 22px;
             width: 110px;
+            text-align: right;
         }
 
         .num-input-small input[type="number"] {
@@ -172,24 +172,31 @@
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
             gap: 20px;
-            align-items: start;
             margin-bottom: 20px;
         }
 
         .left-col {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            display: contents;
         }
 
-        .left-col .card {
-            margin-bottom: 0;
+        .left-col .card:last-child {
+            align-self: stretch;
+        }
+
+        .chart-container {
+            grid-row: 1 / 3;
+            grid-column: 2;
         }
 
         @media (max-width: 640px) {
             .grid-2 {
                 grid-template-columns: 1fr;
+            }
+            .chart-container {
+                grid-row: auto;
+                grid-column: auto;
             }
         }
 
@@ -379,8 +386,6 @@
         .info-text {
             font-size: 11px;
             color: #4a5070;
-            text-align: center;
-            margin-top: 8px;
         }
 
         .portfolio-info {
@@ -514,9 +519,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="card">
+                <div class="card" style="display:flex; flex-direction:column;">
                     <span class="label">Current balances</span>
                     <div id="slicesContainer"></div>
+                    <p class="info-text" style="margin-top:auto; padding-top:12px; text-align:left;">Over-target slices receive no new funds · new cash split proportionally among under-target slices</p>
                 </div>
             </div>
 
@@ -538,7 +544,6 @@
             <div id="resultsContainer"></div>
         </div>
 
-        <p class="info-text">Over-target slices receive no new funds · new cash split proportionally among under-target slices</p>
     </div>
 
     <script>
