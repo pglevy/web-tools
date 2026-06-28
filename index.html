@@ -41,6 +41,11 @@
       --accent-finance: #fff8e1;
       --accent-finance-ink: #7a5000;
       --accent-finance-dot: #E8A838;
+
+      /* Category: Contacts */
+      --accent-contacts: #f3e6da;
+      --accent-contacts-ink: #7a3318;
+      --accent-contacts-dot: #b5532f;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -298,6 +303,10 @@
     .card--finance .card-tag { background: var(--accent-finance); color: var(--accent-finance-ink); }
     .card--finance .dot { background: var(--accent-finance-dot); }
 
+    .card--contacts .card-icon { background: var(--accent-contacts); color: var(--accent-contacts-ink); }
+    .card--contacts .card-tag { background: var(--accent-contacts); color: var(--accent-contacts-ink); }
+    .card--contacts .dot { background: var(--accent-contacts-dot); }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
@@ -345,6 +354,7 @@
     .tool-card:nth-child(7) { animation: fadeUp 0.45s 0.62s ease both; }
     .tool-card:nth-child(8) { animation: fadeUp 0.45s 0.69s ease both; }
     .tool-card:nth-child(9) { animation: fadeUp 0.45s 0.76s ease both; }
+    .tool-card:nth-child(10) { animation: fadeUp 0.45s 0.83s ease both; }
 
     @media (max-width: 600px) {
       header { padding: 48px 0 40px; }
@@ -506,6 +516,20 @@
           <p class="card-desc">Allocate new cash to rebalance your portfolio toward target weights. Visual donut chart with per-slice buy recommendations.</p>
         </div>
         <span class="card-tag"><span class="dot"></span>Finance</span>
+      </a>
+
+      <a href="vcf-contact-manager.html" class="tool-card card--contacts">
+        <div class="card-top">
+          <div class="card-icon">
+            <i class="ph-bold ph-address-book"></i>
+          </div>
+          <i class="ph ph-arrow-up-right card-arrow" style="font-size:18px;"></i>
+        </div>
+        <div>
+          <p class="card-title">Contact Catalog</p>
+          <p class="card-desc">Validate, view, and clean up a .vcf contact export from your phone. Flags missing names, bad numbers, and duplicates before you export.</p>
+        </div>
+        <span class="card-tag"><span class="dot"></span>Contacts</span>
       </a>
 
     </div>
