@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Validate, view, and manage a contact list exported from a phone as a .vcf file. Catches malformed entries, flags duplicates, lets you edit contacts inline, and exports a clean VCF or CSV.">
+<title>Contact Catalog — VCF Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ede2c8;
+    --paper-deep: #e2d4af;
+    --card: #fbf5e6;
+    --ink: #2c2419;
+    --ink-soft: #6b5d47;
+    --ink-faint: #93876c;
+    --rule: #c9b687;
+    --accent: #8a3324;
+    --accent-soft: #b54f3b;
+    --accent-tint: #f0dcd4;
+    --ok: #3f6b48;
+    --ok-tint: #dde8d8;
+    --warn: #9b6a18;
+    --warn-tint: #f1e0bd;
+    --shadow: rgba(44, 36, 25, 0.18);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(44,36,25,0.03) 28px),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 22px 90px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(2.1rem, 5.5vw, 3rem);
+    line-height: 1.05;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+
+  h1 em { font-style: italic; color: var(--accent); }
+
+  .lede {
+    font-family: 'Fraunces', serif;
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 0 36px;
+  }
+
+  /* ---- Upload zone ---- */
+  .dropzone {
+    border: 2px dashed var(--rule);
+    border-radius: 4px;
+    background: var(--card);
+    padding: 48px 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    box-shadow: 0 6px 0 var(--shadow);
+  }
+
+  .dropzone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+  }
+
+  .dropzone .icon { font-size: 30px; margin-bottom: 10px; }
+
+  .dropzone p { margin: 0 0 6px; color: var(--ink-soft); }
+
+  .dropzone .hint { font-size: 12px; color: var(--ink-faint); margin-top: 16px; }
+
+  .dz-button {
+    margin-top: 16px;
+  }
+
+  .paste-toggle {
+    display: inline-block;
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    font-family: inherit;
+  }
+  .paste-toggle:hover { box-shadow: none; transform: none; color: var(--ink); }
+  .paste-toggle:active { box-shadow: none; transform: none; }
+
+  .paste-area { display: none; margin-top: 14px; text-align: left; }
+  .paste-area.open { display: block; }
+
+  textarea.paste-input {
+    width: 100%;
+    min-height: 140px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 10px;
+    background: #fffdf6;
+    color: var(--ink);
+    resize: vertical;
+  }
+
+  /* ---- Buttons ---- */
+  button {
+    font-family: 'Space Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1.5px solid var(--ink);
+    background: var(--card);
+    color: var(--ink);
+    padding: 9px 16px;
+    transition: transform .1s, box-shadow .1s;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+
+  button:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--ink); }
+  button:active { transform: translate(1px, 1px); box-shadow: 0 0 0 var(--ink); }
+
+  button.primary {
+    background: var(--accent);
+    color: #fdf3e7;
+    border-color: var(--accent);
+    box-shadow: 2px 2px 0 #5c1f15;
+  }
+  button.primary:hover { box-shadow: 3px 3px 0 #5c1f15; }
+
+  button.ghost {
+    background: transparent;
+    box-shadow: none;
+    border-color: var(--rule);
+    color: var(--ink-soft);
+  }
+  button.ghost:hover { box-shadow: none; border-color: var(--ink-soft); }
+
+  button.small { padding: 5px 10px; font-size: 11px; box-shadow: 1.5px 1.5px 0 var(--ink); }
+  button.small:hover { box-shadow: 2.5px 2.5px 0 var(--ink); }
+
+  button.danger { border-color: var(--accent); color: var(--accent); }
+
+  /* ---- Parse errors banner ---- */
+  .parse-errors {
+    display: none;
+    margin-top: 18px;
+    border: 1.5px solid var(--accent);
+    background: var(--accent-tint);
+    border-radius: 4px;
+    padding: 14px 16px;
+  }
+  .parse-errors.show { display: block; }
+  .parse-errors h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+  .parse-errors ul { margin: 0; padding-left: 18px; font-size: 12px; color: var(--ink-soft); max-height: 140px; overflow: auto; }
+
+  /* ---- Workspace ---- */
+  #workspace { display: none; margin-top: 8px; }
+  #workspace.show { display: block; }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 28px 0 22px;
+  }
+
+  .stat-chip {
+    border: 1.5px solid var(--ink);
+    background: var(--card);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 11.5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-chip strong { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; }
+  .stat-chip.active { background: var(--ink); color: var(--card); }
+  .stat-chip.warn strong { color: var(--warn); }
+  .stat-chip.warn.active { background: var(--warn); border-color: var(--warn); color: #fff; }
+  .stat-chip.warn.active strong { color: #fff; }
+  .stat-chip.danger strong { color: var(--accent); }
+  .stat-chip.danger.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .stat-chip.danger.active strong { color: #fff; }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--rule);
+  }
+
+  .toolbar input[type="search"],
+  .toolbar select {
+    font-family: 'Space Mono', monospace;
+    font-size: 12.5px;
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    padding: 8px 10px;
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .toolbar input[type="search"] { flex: 1; min-width: 160px; }
+
+  .toolbar .actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 4px; }
+
+  /* ---- Contact cards ---- */
+  .contact-card {
+    background: var(--card);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    box-shadow: 3px 3px 0 var(--shadow);
+  }
+
+  .contact-card.has-warning { border-left: 5px solid var(--warn); }
+  .contact-card.is-duplicate { border-left: 5px solid var(--accent); }
+  .contact-card.has-warning.is-duplicate { border-left: 5px solid var(--accent); }
+
+  .card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+  }
+
+  .card-main { min-width: 0; }
+
+  .card-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin: 0 0 3px;
+  }
+  .card-name .placeholder { color: var(--ink-faint); font-style: italic; font-weight: 400; }
+
+  .card-meta {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .card-meta .placeholder { color: var(--ink-faint); font-style: italic; }
+
+  .card-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .badge-warn { background: var(--warn-tint); color: var(--warn); }
+  .badge-dup { background: var(--accent-tint); color: var(--accent); }
+  .badge-icon { font-size: 13px; color: var(--ink-faint); }
+
+  .card-chevron { color: var(--ink-faint); font-size: 13px; }
+
+  .edit-form {
+    border-top: 1.5px dashed var(--rule);
+    padding: 16px;
+  }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field-row.single { grid-template-columns: 1fr; }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+
+  .field input, .field textarea {
+    width: 100%;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 7px 9px;
+    background: #fffdf6;
+    color: var(--ink);
+  }
+
+  .field textarea { resize: vertical; min-height: 50px; }
+
+  .subgroup { margin-top: 16px; }
+  .subgroup-label { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+
+  .multi-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .multi-row select {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 7px 6px;
+    background: #fffdf6;
+    color: var(--ink);
+    flex-shrink: 0;
+    width: 84px;
+  }
+  .multi-row input { flex: 1; }
+  .multi-row .remove-btn {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    color: var(--ink-faint);
+    font-size: 16px;
+    padding: 2px 6px;
+  }
+  .multi-row .remove-btn:hover { color: var(--accent); transform: none; box-shadow: none; }
+
+  .warning-list {
+    margin: 16px 0 0;
+    padding: 10px 12px;
+    background: var(--warn-tint);
+    border-radius: 4px;
+    font-size: 11.5px;
+    color: #5c4109;
+  }
+  .warning-list p { margin: 0 0 4px; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+  .warning-list ul { margin: 0; padding-left: 16px; }
+
+  .form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-faint);
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+  }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 22px;
+    border-top: 1.5px solid var(--rule);
+    font-size: 11px;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  footer a { color: var(--ink-soft); }
+
+  @media (max-width: 600px) {
+    .field-row { grid-template-columns: 1fr; }
+    .card-meta { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="eyebrow">pglevy / web-tools</p>
+  <h1>Contact <em>catalog.</em></h1>
+  <p class="lede">Drop in a .vcf export from your phone. It gets checked card by card — missing names, broken numbers, malformed emails, and probable duplicates all get flagged — and you can edit or remove entries before exporting a clean file.</p>
+
+  <div id="dropzone" class="dropzone">
+    <div class="icon">&#128209;</div>
+    <p>Drop a .vcf file here, or</p>
+    <button class="primary dz-button" id="pickFileBtn" type="button">Choose file</button>
+    <input type="file" id="fileInput" accept=".vcf,text/vcard,text/x-vcard" multiple style="display:none;">
+    <p class="hint">Multiple files are merged into one catalog. Nothing is uploaded — parsing happens in your browser.</p>
+    <button type="button" class="paste-toggle" id="pasteToggleBtn">...or paste vCard text instead</button>
+    <div class="paste-area" id="pasteArea">
+      <textarea class="paste-input" id="pasteInput" placeholder="BEGIN:VCARD&#10;VERSION:3.0&#10;FN:Jane Doe&#10;..."></textarea>
+      <div style="margin-top:10px;"><button type="button" id="pasteLoadBtn">Load pasted text</button></div>
+    </div>
+  </div>
+
+  <div class="parse-errors" id="parseErrors">
+    <h3>Parsing issues found</h3>
+    <ul id="parseErrorList"></ul>
+  </div>
+
+  <div id="workspace">
+
+    <div class="stats" id="stats"></div>
+
+    <div class="toolbar">
+      <input type="search" id="searchInput" placeholder="Search name, phone, email, org...">
+      <select id="filterSelect">
+        <option value="all">All contacts</option>
+        <option value="warnings">With warnings</option>
+        <option value="duplicates">Possible duplicates</option>
+        <option value="nophone">No phone number</option>
+        <option value="noemail">No email address</option>
+      </select>
+      <select id="sortSelect">
+        <option value="name-asc">Name A &rarr; Z</option>
+        <option value="name-desc">Name Z &rarr; A</option>
+        <option value="warnings-first">Most warnings first</option>
+      </select>
+      <div class="actions">
+        <button type="button" id="addContactBtn">+ Add contact</button>
+        <button type="button" id="removeDupBtn">Remove duplicates</button>
+        <button type="button" id="removeEmptyBtn">Remove empty entries</button>
+        <button type="button" class="primary" id="exportVcfBtn">Export .vcf</button>
+        <button type="button" id="exportCsvBtn">Export .csv</button>
+        <button type="button" class="ghost danger" id="startOverBtn">Start over</button>
+      </div>
+    </div>
+
+    <div id="contactsList"></div>
+
+  </div>
+
+  <footer>
+    <p>Parsing and edits happen entirely in your browser — no contact data leaves this page.</p>
+    <p><a href="index.html">&larr; All tools</a></p>
+  </footer>
+
+</div>
+
+<script>
+  const CORE_KEYS = ['FN','N','TEL','EMAIL','ORG','TITLE','NOTE','BDAY','VERSION'];
+  const TEL_LABELS = { CELL: 'Mobile', HOME: 'Home', WORK: 'Work', FAX: 'Fax', OTHER: 'Other' };
+  const EMAIL_LABELS = { HOME: 'Home', WORK: 'Work', OTHER: 'Other' };
+
+  let contacts = [];
+  let nextId = 1;
+  let parseErrors = [];
+  let expandedIds = new Set();
+  let searchTerm = '';
+  let filterMode = 'all';
+  let sortMode = 'name-asc';
+
+  // ---------- vCard parsing ----------
+
+  function parseVCF(text) {
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const rawLines = text.split('\n');
+    const lines = [];
+    rawLines.forEach(line => {
+      if ((line.startsWith(' ') || line.startsWith('\t')) && lines.length > 0) {
+        lines[lines.length - 1] += line.slice(1);
+      } else if (line.trim() !== '') {
+        lines.push(line);
+      }
+    });
+
+    const cards = [];
+    const errors = [];
+    let current = null;
+
+    lines.forEach((line, idx) => {
+      const upper = line.trim().toUpperCase();
+      if (upper === 'BEGIN:VCARD') {
+        if (current) errors.push(`Line ${idx + 1}: nested BEGIN:VCARD found before previous card closed`);
+        current = [];
+      } else if (upper === 'END:VCARD') {
+        if (!current) {
+          errors.push(`Line ${idx + 1}: END:VCARD with no matching BEGIN:VCARD`);
+        } else {
+          cards.push(current);
+          current = null;
+        }
+      } else if (current) {
+        current.push(line);
+      } else if (line.trim()) {
+        errors.push(`Line ${idx + 1}: data found outside a VCARD block ("${line.trim().slice(0, 40)}")`);
+      }
+    });
+
+    if (current) errors.push('File ends with an unterminated VCARD block (missing END:VCARD)');
+
+    return { cards, errors };
+  }
+
+  function unescapeValue(s) {
+    return s.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+  }
+
+  function escapeValue(s) {
+    return String(s).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+  }
+
+  function splitUnescaped(str, delim) {
+    const parts = [];
+    let cur = '';
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] === '\\' && i + 1 < str.length) {
+        cur += str[i] + str[i + 1];
+        i++;
+      } else if (str[i] === delim) {
+        parts.push(cur);
+        cur = '';
+      } else {
+        cur += str[i];
+      }
+    }
+    parts.push(cur);
+    return parts.map(unescapeValue);
+  }
+
+  function decodeQuotedPrintable(str) {
+    const bytes = [];
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] === '=' && /^[0-9A-Fa-f]{2}$/.test(str.substr(i + 1, 2))) {
+        bytes.push(parseInt(str.substr(i + 1, 2), 16));
+        i += 2;
+      } else {
+        bytes.push(str.charCodeAt(i));
+      }
+    }
+    try {
+      return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+    } catch (e) {
+      return str;
+    }
+  }
+
+  function parseLine(line) {
+    const idx = line.indexOf(':');
+    if (idx === -1) return null;
+    const propPart = line.slice(0, idx);
+    let value = line.slice(idx + 1);
+    const segments = propPart.split(';');
+    let namePart = segments[0];
+    const params = segments.slice(1);
+    const dotIdx = namePart.indexOf('.');
+    if (dotIdx !== -1) namePart = namePart.slice(dotIdx + 1);
+    const name = namePart.toUpperCase();
+
+    const isQP = params.some(p => /^ENCODING=QUOTED-PRINTABLE$/i.test(p));
+    if (isQP) value = decodeQuotedPrintable(value);
+
+    return { name, params, value: unescapeValue(value), line };
+  }
+
+  function extractTypeParam(params) {
+    const tokens = [];
+    params.forEach(p => {
+      const eq = p.indexOf('=');
+      if (eq === -1) {
+        const bare = p.trim().toUpperCase();
+        if (!['BASE64', 'QUOTED-PRINTABLE', 'UTF-8', 'PREF', 'B'].includes(bare)) tokens.push(bare);
+      } else if (p.slice(0, eq).trim().toUpperCase() === 'TYPE') {
+        tokens.push(...p.slice(eq + 1).split(',').map(v => v.trim().toUpperCase()));
+      }
+    });
+    return tokens;
+  }
+
+  function normalizeType(tokens, allowed) {
+    for (const t of tokens) if (allowed.includes(t)) return t;
+    return 'OTHER';
+  }
+
+  function splitName(full) {
+    const trimmed = (full || '').trim();
+    if (!trimmed) return { given: '', family: '' };
+    const parts = trimmed.split(/\s+/);
+    if (parts.length === 1) return { given: parts[0], family: '' };
+    return { given: parts.slice(0, -1).join(' '), family: parts[parts.length - 1] };
+  }
+
+  function buildContact(cardLines, id) {
+    const props = cardLines.map(parseLine).filter(Boolean);
+    const get = name => props.find(p => p.name === name);
+    const getAll = name => props.filter(p => p.name === name);
+
+    const versionProp = get('VERSION');
+    const fnProp = get('FN');
+    const nProp = get('N');
+
+    let displayName = fnProp ? fnProp.value.trim() : '';
+    if (!displayName && nProp) {
+      const parts = splitUnescaped(nProp.value, ';');
+      displayName = [parts[3], parts[1], parts[2], parts[0], parts[4]].filter(Boolean).join(' ').trim();
+    }
+
+    const contact = {
+      id,
+      version: versionProp ? versionProp.value : '3.0',
+      displayName,
+      org: get('ORG') ? get('ORG').value : '',
+      title: get('TITLE') ? get('TITLE').value : '',
+      note: get('NOTE') ? get('NOTE').value : '',
+      bday: get('BDAY') ? get('BDAY').value : '',
+      hasPhoto: !!get('PHOTO'),
+      hasAddress: !!get('ADR'),
+      hasUrl: !!get('URL'),
+      tels: getAll('TEL').map(p => ({ type: normalizeType(extractTypeParam(p.params), ['CELL', 'HOME', 'WORK', 'FAX']), value: p.value })),
+      emails: getAll('EMAIL').map(p => ({ type: normalizeType(extractTypeParam(p.params), ['HOME', 'WORK']), value: p.value })),
+      extraLines: props.filter(p => !CORE_KEYS.includes(p.name)).map(p => p.line),
+      warnings: [],
+      duplicate: false,
+    };
+
+    validateContact(contact);
+    return contact;
+  }
+
+  function validateContact(c) {
+    const warnings = [];
+    if (!c.displayName.trim()) warnings.push('Missing name');
+    if (c.tels.length === 0 && c.emails.length === 0) warnings.push('No phone number or email address');
+    c.tels.forEach(t => {
+      const digits = t.value.replace(/\D/g, '');
+      if (!t.value.trim()) warnings.push('Empty phone number entry');
+      else if (digits.length < 7) warnings.push(`Phone number looks incomplete: "${t.value.trim()}"`);
+    });
+    c.emails.forEach(e => {
+      if (!e.value.trim()) warnings.push('Empty email entry');
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim())) warnings.push(`Email may be invalid: "${e.value.trim()}"`);
+    });
+    c.warnings = warnings;
+  }
+
+  function getDuplicateGroups(list) {
+    const phoneMap = new Map();
+    const nameMap = new Map();
+    list.forEach(c => {
+      c.tels.forEach(t => {
+        const digits = t.value.replace(/\D/g, '');
+        if (digits.length >= 7) {
+          const key = digits.slice(-10);
+          (phoneMap.get(key) || phoneMap.set(key, []).get(key)).push(c);
+        }
+      });
+      const nameKey = c.displayName.trim().toLowerCase();
+      if (nameKey) (nameMap.get(nameKey) || nameMap.set(nameKey, []).get(nameKey)).push(c);
+    });
+    const groups = [];
+    const seen = new Set();
+    [...phoneMap.values(), ...nameMap.values()].forEach(group => {
+      const unique = [...new Set(group)];
+      if (unique.length > 1) {
+        const key = unique.map(c => c.id).sort((a, b) => a - b).join(',');
+        if (!seen.has(key)) { seen.add(key); groups.push(unique); }
+      }
+    });
+    return groups;
+  }
+
+  function detectDuplicates(list) {
+    list.forEach(c => c.duplicate = false);
+    getDuplicateGroups(list).forEach(group => group.forEach(c => c.duplicate = true));
+  }
+
+  function contactScore(c) {
+    return c.tels.length + c.emails.length + (c.org ? 1 : 0) + (c.title ? 1 : 0) + (c.note ? 1 : 0) + (c.bday ? 1 : 0) + (c.hasPhoto ? 1 : 0) + (c.hasAddress ? 1 : 0);
+  }
+
+  // ---------- Export ----------
+
+  function contactToVCF(c) {
+    const lines = ['BEGIN:VCARD', `VERSION:${c.version || '3.0'}`];
+    const name = (c.displayName || '').trim();
+    if (name) lines.push(`FN:${escapeValue(name)}`);
+    const { given, family } = splitName(name);
+    if (given || family) lines.push(`N:${escapeValue(family)};${escapeValue(given)};;;`);
+    c.tels.forEach(t => {
+      const v = t.value.trim();
+      if (v) lines.push(`TEL${t.type !== 'OTHER' ? ';TYPE=' + t.type : ''}:${escapeValue(v)}`);
+    });
+    c.emails.forEach(e => {
+      const v = e.value.trim();
+      if (v) lines.push(`EMAIL${e.type !== 'OTHER' ? ';TYPE=' + e.type : ''}:${escapeValue(v)}`);
+    });
+    if (c.org.trim()) lines.push(`ORG:${escapeValue(c.org.trim())}`);
+    if (c.title.trim()) lines.push(`TITLE:${escapeValue(c.title.trim())}`);
+    if (c.bday.trim()) lines.push(`BDAY:${c.bday.trim()}`);
+    if (c.note.trim()) lines.push(`NOTE:${escapeValue(c.note.trim())}`);
+    c.extraLines.forEach(l => lines.push(l));
+    lines.push('END:VCARD');
+    return lines.join('\r\n');
+  }
+
+  function downloadFile(content, filename, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function csvEscape(v) {
+    v = v == null ? '' : String(v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+
+  function exportVCF() {
+    if (!contacts.length) return;
+    const text = contacts.map(contactToVCF).join('\r\n') + '\r\n';
+    downloadFile(text, `contacts-${Date.now()}.vcf`, 'text/vcard');
+  }
+
+  function exportCSV() {
+    if (!contacts.length) return;
+    const header = ['Name', 'Phones', 'Emails', 'Organization', 'Title', 'Birthday', 'Note'];
+    const rows = contacts.map(c => [
+      c.displayName,
+      c.tels.map(t => `${TEL_LABELS[t.type]}: ${t.value}`).join('; '),
+      c.emails.map(e => `${EMAIL_LABELS[e.type]}: ${e.value}`).join('; '),
+      c.org, c.title, c.bday, c.note,
+    ]);
+    const csv = [header, ...rows].map(row => row.map(csvEscape).join(',')).join('\r\n');
+    downloadFile(csv, `contacts-${Date.now()}.csv`, 'text/csv');
+  }
+
+  // ---------- Loading ----------
+
+  function loadVCFText(text) {
+    const { cards, errors } = parseVCF(text);
+    parseErrors = parseErrors.concat(errors);
+    if (cards.length === 0 && errors.length === 0) {
+      parseErrors.push('No vCard data (BEGIN:VCARD / END:VCARD blocks) found in the supplied text.');
+    }
+    const newContacts = cards.map(lines => buildContact(lines, nextId++));
+    contacts = contacts.concat(newContacts);
+    detectDuplicates(contacts);
+    renderParseErrors();
+    if (contacts.length) {
+      document.getElementById('workspace').classList.add('show');
+      renderAll();
+    }
+  }
+
+  function renderParseErrors() {
+    const el = document.getElementById('parseErrors');
+    const list = document.getElementById('parseErrorList');
+    if (parseErrors.length === 0) { el.classList.remove('show'); return; }
+    list.innerHTML = parseErrors.map(e => `<li>${esc(e)}</li>`).join('');
+    el.classList.add('show');
+  }
+
+  // ---------- Rendering ----------
+
+  function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+
+  function getFilteredSorted() {
+    let list = contacts.slice();
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(c =>
+        c.displayName.toLowerCase().includes(q) ||
+        c.org.toLowerCase().includes(q) ||
+        c.tels.some(t => t.value.toLowerCase().includes(q)) ||
+        c.emails.some(e => e.value.toLowerCase().includes(q))
+      );
+    }
+    if (filterMode === 'warnings') list = list.filter(c => c.warnings.length > 0);
+    if (filterMode === 'duplicates') list = list.filter(c => c.duplicate);
+    if (filterMode === 'nophone') list = list.filter(c => c.tels.length === 0);
+    if (filterMode === 'noemail') list = list.filter(c => c.emails.length === 0);
+
+    if (sortMode === 'name-asc') list.sort((a, b) => a.displayName.localeCompare(b.displayName));
+    if (sortMode === 'name-desc') list.sort((a, b) => b.displayName.localeCompare(a.displayName));
+    if (sortMode === 'warnings-first') list.sort((a, b) => b.warnings.length - a.warnings.length);
+    return list;
+  }
+
+  function renderAll() {
+    renderStats();
+    renderContacts();
+  }
+
+  function renderStats() {
+    const total = contacts.length;
+    const withPhone = contacts.filter(c => c.tels.length > 0).length;
+    const withEmail = contacts.filter(c => c.emails.length > 0).length;
+    const withWarnings = contacts.filter(c => c.warnings.length > 0).length;
+    const dupes = contacts.filter(c => c.duplicate).length;
+
+    const chip = (mode, label, value, cls) =>
+      `<div class="stat-chip ${cls || ''} ${filterMode === mode ? 'active' : ''}" data-filter="${mode}"><strong>${value}</strong> ${esc(label)}</div>`;
+
+    document.getElementById('stats').innerHTML = [
+      chip('all', total === 1 ? 'contact' : 'contacts', total),
+      chip('nophone', 'no phone', total - withPhone),
+      chip('noemail', 'no email', total - withEmail),
+      chip('warnings', withWarnings === 1 ? 'warning' : 'warnings', withWarnings, 'warn'),
+      chip('duplicates', 'possible duplicates', dupes, 'danger'),
+    ].join('');
+
+    document.querySelectorAll('.stat-chip').forEach(el => {
+      el.addEventListener('click', () => {
+        filterMode = el.dataset.filter;
+        document.getElementById('filterSelect').value = filterMode;
+        renderAll();
+      });
+    });
+  }
+
+  function metaLine(c) {
+    const bits = [];
+    if (c.tels[0]) bits.push(esc(c.tels[0].value));
+    if (c.emails[0]) bits.push(esc(c.emails[0].value));
+    if (c.org) bits.push(esc(c.org));
+    return bits.length ? bits.join(' &middot; ') : '<span class="placeholder">No phone, email, or organization</span>';
+  }
+
+  function renderContacts() {
+    const list = getFilteredSorted();
+    const container = document.getElementById('contactsList');
+
+    if (contacts.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    if (list.length === 0) {
+      container.innerHTML = '<div class="empty-state">No contacts match this view.</div>';
+      return;
+    }
+
+    container.innerHTML = list.map(renderCard).join('');
+  }
+
+  function renderCard(c) {
+    const expanded = expandedIds.has(c.id);
+    const icons = [];
+    if (c.hasPhoto) icons.push('<span class="badge-icon" title="Has photo">&#128247;</span>');
+    if (c.hasAddress) icons.push('<span class="badge-icon" title="Has address">&#127968;</span>');
+    if (c.hasUrl) icons.push('<span class="badge-icon" title="Has website">&#127760;</span>');
+
+    return `
+      <div class="contact-card ${c.warnings.length ? 'has-warning' : ''} ${c.duplicate ? 'is-duplicate' : ''}">
+        <div class="card-row" tabindex="0" role="button" onclick="toggleExpand(${c.id})" onkeydown="if(event.key==='Enter')toggleExpand(${c.id})">
+          <div class="card-main">
+            <p class="card-name">${c.displayName ? esc(c.displayName) : '<span class="placeholder">Unnamed contact</span>'}</p>
+            <p class="card-meta">${metaLine(c)}</p>
+          </div>
+          <div class="card-badges">
+            ${icons.join('')}
+            ${c.duplicate ? '<span class="badge badge-dup">Duplicate</span>' : ''}
+            ${c.warnings.length ? `<span class="badge badge-warn">${c.warnings.length} warning${c.warnings.length > 1 ? 's' : ''}</span>` : ''}
+            <span class="card-chevron">${expanded ? '&#9662;' : '&#9656;'}</span>
+          </div>
+        </div>
+        ${expanded ? renderEditForm(c) : ''}
+      </div>`;
+  }
+
+  function telRow(c, t, idx) {
+    const options = Object.entries(TEL_LABELS).map(([k, v]) => `<option value="${k}" ${t.type === k ? 'selected' : ''}>${v}</option>`).join('');
+    return `
+      <div class="multi-row">
+        <select onchange="updateTel(${c.id}, ${idx}, 'type', this.value)">${options}</select>
+        <input type="text" value="${esc(t.value)}" placeholder="Phone number" onchange="updateTel(${c.id}, ${idx}, 'value', this.value)">
+        <button type="button" class="remove-btn" title="Remove" onclick="removeTel(${c.id}, ${idx})">&times;</button>
+      </div>`;
+  }
+
+  function emailRow(c, e, idx) {
+    const options = Object.entries(EMAIL_LABELS).map(([k, v]) => `<option value="${k}" ${e.type === k ? 'selected' : ''}>${v}</option>`).join('');
+    return `
+      <div class="multi-row">
+        <select onchange="updateEmail(${c.id}, ${idx}, 'type', this.value)">${options}</select>
+        <input type="text" value="${esc(e.value)}" placeholder="Email address" onchange="updateEmail(${c.id}, ${idx}, 'value', this.value)">
+        <button type="button" class="remove-btn" title="Remove" onclick="removeEmail(${c.id}, ${idx})">&times;</button>
+      </div>`;
+  }
+
+  function renderEditForm(c) {
+    return `
+      <div class="edit-form">
+        <div class="field-row">
+          <div class="field">
+            <label>Full name</label>
+            <input type="text" value="${esc(c.displayName)}" onchange="updateField(${c.id}, 'displayName', this.value)">
+          </div>
+          <div class="field">
+            <label>Organization</label>
+            <input type="text" value="${esc(c.org)}" onchange="updateField(${c.id}, 'org', this.value)">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Title</label>
+            <input type="text" value="${esc(c.title)}" onchange="updateField(${c.id}, 'title', this.value)">
+          </div>
+          <div class="field">
+            <label>Birthday</label>
+            <input type="text" value="${esc(c.bday)}" placeholder="YYYY-MM-DD" onchange="updateField(${c.id}, 'bday', this.value)">
+          </div>
+        </div>
+
+        <div class="subgroup">
+          <p class="subgroup-label">Phone numbers</p>
+          ${c.tels.map((t, i) => telRow(c, t, i)).join('') || '<p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 8px;">None</p>'}
+          <button type="button" class="small" onclick="addTel(${c.id})">+ Add phone</button>
+        </div>
+
+        <div class="subgroup">
+          <p class="subgroup-label">Email addresses</p>
+          ${c.emails.map((e, i) => emailRow(c, e, i)).join('') || '<p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 8px;">None</p>'}
+          <button type="button" class="small" onclick="addEmail(${c.id})">+ Add email</button>
+        </div>
+
+        <div class="field-row single subgroup">
+          <div class="field">
+            <label>Note</label>
+            <textarea onchange="updateField(${c.id}, 'note', this.value)">${esc(c.note)}</textarea>
+          </div>
+        </div>
+
+        ${c.warnings.length ? `
+          <div class="warning-list">
+            <p>Validation warnings</p>
+            <ul>${c.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+          </div>` : ''}
+
+        <div class="form-footer">
+          <button type="button" class="ghost danger small" onclick="deleteContact(${c.id})">Delete contact</button>
+          <button type="button" class="small" onclick="toggleExpand(${c.id})">Collapse</button>
+        </div>
+      </div>`;
+  }
+
+  // ---------- Mutations ----------
+
+  function refresh(c) {
+    validateContact(c);
+    detectDuplicates(contacts);
+    renderAll();
+  }
+
+  function toggleExpand(id) {
+    if (expandedIds.has(id)) expandedIds.delete(id); else expandedIds.add(id);
+    renderContacts();
+  }
+
+  function updateField(id, field, value) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c[field] = value;
+    refresh(c);
+  }
+
+  function updateTel(id, idx, key, value) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c.tels[idx][key] = value;
+    refresh(c);
+  }
+
+  function addTel(id) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c.tels.push({ type: 'CELL', value: '' });
+    refresh(c);
+  }
+
+  function removeTel(id, idx) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c.tels.splice(idx, 1);
+    refresh(c);
+  }
+
+  function updateEmail(id, idx, key, value) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c.emails[idx][key] = value;
+    refresh(c);
+  }
+
+  function addEmail(id) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c.emails.push({ type: 'HOME', value: '' });
+    refresh(c);
+  }
+
+  function removeEmail(id, idx) {
+    const c = contacts.find(x => x.id === id);
+    if (!c) return;
+    c.emails.splice(idx, 1);
+    refresh(c);
+  }
+
+  function addContact() {
+    const c = {
+      id: nextId++, version: '3.0', displayName: '', org: '', title: '', note: '', bday: '',
+      hasPhoto: false, hasAddress: false, hasUrl: false, tels: [], emails: [], extraLines: [], warnings: [], duplicate: false,
+    };
+    contacts.unshift(c);
+    expandedIds.add(c.id);
+    document.getElementById('workspace').classList.add('show');
+    refresh(c);
+  }
+
+  function deleteContact(id) {
+    contacts = contacts.filter(c => c.id !== id);
+    expandedIds.delete(id);
+    detectDuplicates(contacts);
+    renderAll();
+  }
+
+  function removeDuplicates() {
+    const groups = getDuplicateGroups(contacts);
+    const toRemove = new Set();
+    groups.forEach(group => {
+      const sorted = group.slice().sort((a, b) => contactScore(b) - contactScore(a));
+      sorted.slice(1).forEach(c => toRemove.add(c.id));
+    });
+    if (toRemove.size === 0) { alert('No duplicates found.'); return; }
+    if (!confirm(`Remove ${toRemove.size} duplicate contact(s)? The most complete entry in each duplicate group is kept.`)) return;
+    contacts = contacts.filter(c => !toRemove.has(c.id));
+    detectDuplicates(contacts);
+    renderAll();
+  }
+
+  function removeEmpty() {
+    const toRemove = contacts.filter(c => !c.displayName.trim() && c.tels.length === 0 && c.emails.length === 0);
+    if (toRemove.length === 0) { alert('No empty contacts found.'); return; }
+    if (!confirm(`Remove ${toRemove.length} empty contact(s) with no name, phone, or email?`)) return;
+    const removeIds = new Set(toRemove.map(c => c.id));
+    contacts = contacts.filter(c => !removeIds.has(c.id));
+    renderAll();
+  }
+
+  function startOver() {
+    if (contacts.length && !confirm('Clear the loaded contact list and start over?')) return;
+    contacts = [];
+    parseErrors = [];
+    expandedIds = new Set();
+    searchTerm = '';
+    filterMode = 'all';
+    sortMode = 'name-asc';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterSelect').value = 'all';
+    document.getElementById('sortSelect').value = 'name-asc';
+    document.getElementById('workspace').classList.remove('show');
+    renderParseErrors();
+  }
+
+  // ---------- Wiring ----------
+
+  function setupUpload() {
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+
+    document.getElementById('pickFileBtn').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+    dropzone.addEventListener('click', e => {
+      if (e.target.closest('#pasteArea') || e.target.closest('#pasteToggleBtn')) return;
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    document.getElementById('pasteToggleBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('pasteArea').classList.toggle('open');
+    });
+    document.getElementById('pasteLoadBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      const text = document.getElementById('pasteInput').value;
+      if (text.trim()) { loadVCFText(text); document.getElementById('pasteInput').value = ''; }
+    });
+  }
+
+  function handleFiles(fileList) {
+    const files = [...fileList];
+    if (!files.length) return;
+    Promise.all(files.map(f => f.text())).then(texts => loadVCFText(texts.join('\n')));
+  }
+
+  function setupToolbar() {
+    document.getElementById('searchInput').addEventListener('input', e => { searchTerm = e.target.value; renderContacts(); });
+    document.getElementById('filterSelect').addEventListener('change', e => { filterMode = e.target.value; renderAll(); });
+    document.getElementById('sortSelect').addEventListener('change', e => { sortMode = e.target.value; renderContacts(); });
+    document.getElementById('addContactBtn').addEventListener('click', addContact);
+    document.getElementById('removeDupBtn').addEventListener('click', removeDuplicates);
+    document.getElementById('removeEmptyBtn').addEventListener('click', removeEmpty);
+    document.getElementById('exportVcfBtn').addEventListener('click', exportVCF);
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+    document.getElementById('startOverBtn').addEventListener('click', startOver);
+  }
+
+  setupUpload();
+  setupToolbar();
+</script>
+</body>
+</html>
