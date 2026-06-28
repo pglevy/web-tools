@@ -41,11 +41,6 @@
       --accent-finance: #fff8e1;
       --accent-finance-ink: #7a5000;
       --accent-finance-dot: #E8A838;
-
-      /* Category: Contacts */
-      --accent-contacts: #f3e6da;
-      --accent-contacts-ink: #7a3318;
-      --accent-contacts-dot: #b5532f;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -303,10 +298,6 @@
     .card--finance .card-tag { background: var(--accent-finance); color: var(--accent-finance-ink); }
     .card--finance .dot { background: var(--accent-finance-dot); }
 
-    .card--contacts .card-icon { background: var(--accent-contacts); color: var(--accent-contacts-ink); }
-    .card--contacts .card-tag { background: var(--accent-contacts); color: var(--accent-contacts-ink); }
-    .card--contacts .dot { background: var(--accent-contacts-dot); }
-
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
@@ -518,7 +509,7 @@
         <span class="card-tag"><span class="dot"></span>Finance</span>
       </a>
 
-      <a href="vcf-contact-manager.html" class="tool-card card--contacts">
+      <a href="vcf-contact-manager.html" class="tool-card card--data">
         <div class="card-top">
           <div class="card-icon">
             <i class="ph-bold ph-address-book"></i>
@@ -529,7 +520,7 @@
           <p class="card-title">Contact Catalog</p>
           <p class="card-desc">Validate, view, and clean up a .vcf contact export from your phone. Flags missing names, bad numbers, and duplicates before you export.</p>
         </div>
-        <span class="card-tag"><span class="dot"></span>Contacts</span>
+        <span class="card-tag"><span class="dot"></span>Data</span>
       </a>
 
     </div>
