@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV Preview</title>
+<meta name="description" content="Open a CSV file straight from disk and read it as a tidy table. Nothing is converted or saved, and the view refreshes when the file changes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;600&family=IBM+Plex+Serif:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f6f8f3;
+    --band: #eaf2e5;
+      --ink: #17261c;
+    --ink-muted: #5b6e60;
+    --rule: #a9c2a2;
+    --hole: #e4e8de;
+    --hole-ring: #c2cbbc;
+    --desk: #e9ede4;
+    --accent: #0f6b3a;
+    --stamp: #b3261e;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --serif: "IBM Plex Serif", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1a241d;
+      --band: #1f2e24;
+      --ink: #e4efe4;
+      --ink-muted: #8fa595;
+      --rule: #3d5a46;
+      --hole: #111912;
+      --hole-ring: #2f4636;
+      --desk: #121a14;
+      --accent: #7fd6a0;
+      --stamp: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--desk);
+    color: var(--ink);
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 14px;
+  }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: 1.5rem; letter-spacing: -0.01em; }
+  .file-meta { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-muted); flex: 1 1 240px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-meta b { color: var(--ink); font-weight: 500; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button, .btn, input[type=search], select {
+    font: inherit; font-size: 0.85rem; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 6px;
+    padding: 7px 12px; cursor: pointer;
+  }
+  input[type=search] { cursor: text; width: 200px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); font-weight: 600; }
+  button:focus-visible, input:focus-visible, select:focus-visible, th button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  label.check { display: inline-flex; gap: 6px; align-items: center; font-size: 0.85rem; color: var(--ink-muted); cursor: pointer; }
+  .live { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 6px; }
+  .live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rule); }
+  .live.on::before { background: var(--accent); }
+  .live.flash { color: var(--stamp); }
+  .live.flash::before { background: var(--stamp); }
+
+  /* The sheet: greenbar fan-fold paper with tractor-feed holes */
+  .sheet {
+    position: relative; flex: 1; min-height: 0; background: var(--paper);
+    border: 1px solid var(--rule); border-radius: 4px; overflow: hidden;
+    box-shadow: 0 1px 0 var(--rule), 0 10px 30px -18px rgba(0,0,0,.35);
+  }
+  .sheet::before, .sheet::after {
+    content: ""; position: absolute; top: 0; bottom: 0; width: 34px; z-index: 3; pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 50%, var(--hole) 0 5px, var(--hole-ring) 5.5px 6.5px, transparent 7px) 0 0 / 34px 44px repeat-y,
+      var(--paper);
+  }
+  .sheet::before { left: 0; border-right: 1px dashed var(--rule); }
+  .sheet::after { right: 0; border-left: 1px dashed var(--rule); }
+  .scroller { position: absolute; inset: 0 34px; overflow: auto; }
+
+  table { border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-size: 0.82rem; min-width: 100%; }
+  th, td { padding: 6px 14px; text-align: left; white-space: nowrap; max-width: 380px; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid transparent; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.empty { color: var(--rule); }
+  td.expanded { white-space: normal; max-width: 600px; word-break: break-word; }
+  thead th {
+    position: sticky; top: 0; z-index: 2; background: var(--paper); border-bottom: 2px solid var(--ink);
+    font-family: var(--sans); font-weight: 600; font-size: 0.78rem; padding: 0;
+  }
+  thead th button {
+    all: unset; box-sizing: border-box; display: flex; width: 100%; padding: 10px 14px; gap: 6px; cursor: pointer; align-items: center; justify-content: space-between;
+  }
+  thead th.num button { flex-direction: row-reverse; }
+  thead th button:hover { background: var(--band); }
+  .arrow { color: var(--accent); font-size: 0.7rem; }
+  th.rownum, td.rownum { position: sticky; left: 0; z-index: 1; text-align: right; color: var(--ink-muted); font-size: 0.72rem; padding: 6px 10px; border-right: 1px solid var(--rule); background: var(--paper); min-width: 3.2em; }
+  thead th.rownum { z-index: 3; padding: 10px; }
+  tbody tr:nth-child(even) td { background: var(--band); }
+  tbody tr:hover td { box-shadow: inset 0 0 0 100vmax rgba(15,107,58,.10); }
+  td { cursor: default; }
+
+  .more { padding: 14px; text-align: center; font-size: 0.85rem; color: var(--ink-muted); }
+
+  .empty-state {
+    position: absolute; inset: 0 34px; display: grid; place-items: center; text-align: center; padding: 24px;
+  }
+  .empty-state > div { max-width: 460px; display: grid; gap: 14px; justify-items: center; }
+  .empty-state h2 { font-family: var(--serif); font-weight: 400; font-size: 1.6rem; }
+  .empty-state p { color: var(--ink-muted); font-weight: 300; line-height: 1.6; font-size: 0.95rem; }
+  .sheet.dragging { outline: 3px dashed var(--accent); outline-offset: -8px; }
+  .error { color: var(--stamp); font-family: var(--mono); font-size: 0.85rem; }
+  [hidden] { display: none !important; }
+
+  footer { font-family: var(--mono); font-size: 0.74rem; color: var(--ink-muted); display: flex; gap: 8px 18px; flex-wrap: wrap; }
+
+  @media (max-width: 640px) {
+    body { padding: 12px; }
+    input[type=search] { width: 100%; }
+    .controls { width: 100%; }
+    .sheet::before, .sheet::after { width: 18px; background-size: 18px 44px; }
+    .scroller, .empty-state { inset: 0 18px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .live::before { transition: background .2s; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>CSV Preview</h1>
+    <div class="file-meta" id="meta">No file open</div>
+    <div class="controls">
+      <input type="search" id="filter" placeholder="Filter rows" aria-label="Filter rows" hidden>
+      <label class="check" id="headerWrap" hidden><input type="checkbox" id="hasHeader" checked> First row is header</label>
+      <select id="delim" aria-label="Delimiter" hidden>
+        <option value="">Auto delimiter</option>
+        <option value=",">Comma</option>
+        <option value=";">Semicolon</option>
+        <option value="&#9;">Tab</option>
+        <option value="|">Pipe</option>
+      </select>
+      <span class="live" id="live" hidden>Watching</span>
+      <button class="primary" id="open">Open CSV…</button>
+    </div>
+  </header>
+
+  <main class="sheet" id="sheet">
+    <div class="empty-state" id="empty">
+      <div>
+        <h2>Read a CSV where it lives</h2>
+        <p>Open a file or drop it here. The table is a view only: your CSV is never converted or saved. In Chrome and Edge, the view refreshes when you save changes to the file.</p>
+        <button class="primary" id="open2">Open CSV…</button>
+        <p class="error" id="err" role="alert"></p>
+      </div>
+    </div>
+    <div class="scroller" id="scroller" hidden></div>
+  </main>
+
+  <footer id="foot" hidden></footer>
+  <input type="file" id="picker" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" hidden>
+
+<script>
+const $ = id => document.getElementById(id);
+const PAGE = 1000;
+const state = { handle: null, file: null, text: '', rows: [], header: [], body: [], delim: ',', sortCol: -1, sortDir: 0, query: '', shown: PAGE, lastModified: 0, nums: [] };
+let pollTimer = null;
+
+/* ---------- parsing ---------- */
+function detectDelimiter(text) {
+  const sample = text.slice(0, 5000).split(/\r?\n/).slice(0, 10);
+  let best = ',', bestScore = -1;
+  for (const d of [',', ';', '\t', '|']) {
+    const counts = sample.map(l => parse(l, d)[0]?.length || 0).filter(n => n > 0);
+    if (!counts.length) continue;
+    const consistent = counts.every(n => n === counts[0]);
+    const score = (consistent ? 1000 : 0) + counts[0];
+    if (counts[0] > 1 && score > bestScore) { bestScore = score; best = d; }
+  }
+  return best;
+}
+
+function parse(text, d) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"' && cell === '') q = true;
+    else if (c === d) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+const isNum = s => s !== '' && /^[-+]?[$£€]?\s?[\d,]*\.?\d+(e[-+]?\d+)?%?$/i.test(s.trim());
+const toNum = s => parseFloat(s.replace(/[^\d.eE+-]/g, ''));
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- loading ---------- */
+async function loadFile(file, handle) {
+  $('err').textContent = '';
+  try {
+    state.file = file; state.handle = handle || state.handle;
+    state.lastModified = file.lastModified;
+    state.text = (await file.text()).replace(/^﻿/, '');
+    process();
+    startWatching();
+  } catch (e) {
+    $('err').textContent = 'Could not read that file: ' + e.message;
+  }
+}
+
+function process() {
+  const forced = $('delim').value;
+  state.delim = forced || detectDelimiter(state.text);
+  let rows = parse(state.text, state.delim);
+  while (rows.length && rows[rows.length - 1].every(c => c === '')) rows.pop();
+  const width = Math.max(0, ...rows.map(r => r.length));
+  rows = rows.map(r => r.concat(Array(width - r.length).fill('')));
+  state.rows = rows;
+  splitHeader();
+}
+
+function splitHeader() {
+  const hasHeader = $('hasHeader').checked && state.rows.length > 0;
+  const width = state.rows[0]?.length || 0;
+  state.header = hasHeader ? state.rows[0] : Array.from({ length: width }, (_, i) => colName(i));
+  state.body = hasHeader ? state.rows.slice(1) : state.rows;
+  state.nums = state.header.map((_, c) => {
+    const vals = state.body.slice(0, 200).map(r => r[c]).filter(v => v !== '');
+    return vals.length > 0 && vals.every(isNum);
+  });
+  state.sortCol = -1; state.sortDir = 0; state.shown = PAGE;
+  show(); render();
+}
+
+function colName(i) { let s = ''; i++; while (i > 0) { s = String.fromCharCode(65 + (i - 1) % 26) + s; i = Math.floor((i - 1) / 26); } return s; }
+
+function show() {
+  const has = !!state.file;
+  $('empty').hidden = has; $('scroller').hidden = !has; $('foot').hidden = !has;
+  for (const id of ['filter', 'headerWrap', 'delim']) $(id).hidden = !has;
+  $('live').hidden = !(has && state.handle);
+  $('open').textContent = has ? 'Open another…' : 'Open CSV…';
+  const f = state.file;
+  $('meta').innerHTML = has ? `<b>${esc(f.name)}</b> · ${fmtSize(f.size)} · saved ${new Date(f.lastModified).toLocaleString()}` : 'No file open';
+  document.title = has ? `${f.name} · CSV Preview` : 'CSV Preview';
+}
+
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+const delimName = d => ({ ',': 'comma', ';': 'semicolon', '\t': 'tab', '|': 'pipe' }[d]);
+
+/* ---------- rendering ---------- */
+function visibleRows() {
+  let rows = state.body;
+  const q = state.query.trim().toLowerCase();
+  if (q) rows = rows.filter(r => r.some(c => c.toLowerCase().includes(q)));
+  if (state.sortDir) {
+    const c = state.sortCol, num = state.nums[c], dir = state.sortDir;
+    rows = rows.slice().sort((a, b) => {
+      const x = a[c], y = b[c];
+      if (x === '' || y === '') return (x === '') - (y === '');
+      return dir * (num ? toNum(x) - toNum(y) : x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' }));
+    });
+  }
+  return rows;
+}
+
+function render() {
+  if (!state.file) return;
+  const rows = visibleRows();
+  const shown = rows.slice(0, state.shown);
+  const head = state.header.map((h, i) => {
+    const arrow = state.sortCol === i ? (state.sortDir === 1 ? '▲' : '▼') : '';
+    const aria = state.sortCol === i ? (state.sortDir === 1 ? 'ascending' : 'descending') : 'none';
+    return `<th class="${state.nums[i] ? 'num' : ''}" aria-sort="${aria}"><button data-col="${i}" title="Sort by ${esc(h)}"><span>${esc(h) || '&nbsp;'}</span><span class="arrow">${arrow}</span></button></th>`;
+  }).join('');
+  const orig = new Map(state.body.map((r, i) => [r, i + 1]));
+  const body = shown.map(r => `<tr><td class="rownum">${orig.get(r)}</td>${r.map((c, i) =>
+    `<td class="${state.nums[i] ? 'num' : ''}${c === '' ? ' empty' : ''}" title="${esc(c.slice(0, 300))}">${c === '' ? '–' : esc(c)}</td>`).join('')}</tr>`).join('');
+  const more = rows.length > shown.length ? `<div class="more"><button id="more">Show ${Math.min(PAGE, rows.length - shown.length).toLocaleString()} more rows</button></div>` : '';
+  const none = rows.length === 0 ? `<div class="more">${state.body.length ? 'No rows match that filter.' : 'This file has no data rows.'}</div>` : '';
+  const sc = $('scroller'), top = sc.scrollTop, left = sc.scrollLeft;
+  sc.innerHTML = `<table><thead><tr><th class="rownum">#</th>${head}</tr></thead><tbody>${body}</tbody></table>${none}${more}`;
+  sc.scrollTop = top; sc.scrollLeft = left;
+  $('foot').innerHTML = `<span>${state.body.length.toLocaleString()} rows × ${state.header.length} columns</span>` +
+    (state.query ? `<span>${rows.length.toLocaleString()} match “${esc(state.query)}”</span>` : '') +
+    `<span>${delimName(state.delim)}-separated</span><span>Click a header to sort · click a cell to expand it</span>`;
+}
+
+/* ---------- live refresh (File System Access API) ---------- */
+function startWatching() {
+  clearInterval(pollTimer);
+  if (!state.handle) return;
+  const live = $('live');
+  live.hidden = false; live.className = 'live on'; live.textContent = 'Watching';
+  pollTimer = setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const f = await state.handle.getFile();
+      if (f.lastModified !== state.lastModified || f.size !== state.file.size) {
+        await loadFile(f);
+        live.textContent = 'Refreshed'; setTimeout(() => { live.textContent = 'Watching'; }, 1500);
+      }
+    } catch (e) {
+      live.className = 'live flash'; live.textContent = 'File unavailable';
+      clearInterval(pollTimer);
+    }
+  }, 1000);
+}
+
+/* ---------- opening ---------- */
+async function openFile() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [h] = await showOpenFilePicker({ types: [{ description: 'CSV and text tables', accept: { 'text/csv': ['.csv', '.tsv', '.txt'] } }] });
+      state.handle = h; await loadFile(await h.getFile(), h);
+    } catch (e) { if (e.name !== 'AbortError') $('err').textContent = e.message; }
+  } else $('picker').click();
+}
+
+$('open').onclick = $('open2').onclick = openFile;
+$('picker').onchange = e => { const f = e.target.files[0]; if (f) { state.handle = null; clearInterval(pollTimer); loadFile(f); } e.target.value = ''; };
+
+const sheet = $('sheet');
+['dragenter', 'dragover'].forEach(t => sheet.addEventListener(t, e => { e.preventDefault(); sheet.classList.add('dragging'); }));
+['dragleave', 'drop'].forEach(t => sheet.addEventListener(t, e => { e.preventDefault(); sheet.classList.remove('dragging'); }));
+sheet.addEventListener('drop', async e => {
+  const item = e.dataTransfer.items[0];
+  if (!item) return;
+  if (item.getAsFileSystemHandle) {
+    try { const h = await item.getAsFileSystemHandle(); if (h.kind === 'file') { state.handle = h; return loadFile(await h.getFile(), h); } } catch (_) {}
+  }
+  const f = e.dataTransfer.files[0];
+  if (f) { state.handle = null; clearInterval(pollTimer); loadFile(f); }
+});
+
+$('scroller').addEventListener('click', e => {
+  const th = e.target.closest('th button[data-col]');
+  if (th) {
+    const c = +th.dataset.col;
+    if (state.sortCol !== c) { state.sortCol = c; state.sortDir = 1; }
+    else if (state.sortDir === 1) state.sortDir = -1;
+    else { state.sortCol = -1; state.sortDir = 0; }
+    return render();
+  }
+  if (e.target.id === 'more') { state.shown += PAGE; return render(); }
+  const td = e.target.closest('td:not(.rownum)');
+  if (td) td.classList.toggle('expanded');
+});
+$('filter').oninput = e => { state.query = e.target.value; state.shown = PAGE; render(); };
+$('hasHeader').onchange = () => state.file && splitHeader();
+$('delim').onchange = () => state.file && process();
+</script>
+</body>
+</html>
