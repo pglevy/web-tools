@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Drop an exported Kiro session folder or messages.jsonl onto the page to turn it into a readable Markdown transcript. Everything runs in your browser. Copy or download the result.">
+  <title>Session to Markdown</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <style>
+    :root {
+      --paper: #f3edde; --paper-deep: #e9e1cb; --sheet: #fdfbf4;
+      --ink: #221d14; --ink-muted: #6e6553; --ink-faint: #a39a83;
+      --rule: #d5cbb2; --red: #b23a2a;
+      --mono: 'IBM Plex Mono', 'Courier New', monospace;
+      --serif: 'Fraunces', Georgia, serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--serif); color: var(--ink); min-height: 100vh; padding: 0 20px 80px;
+      background-color: var(--paper);
+      background-image: radial-gradient(var(--rule) 0.75px, transparent 0.75px);
+      background-size: 22px 22px;
+    }
+    .press { max-width: 860px; margin: 0 auto; }
+    .masthead { padding-top: 28px; }
+    .slug {
+      display: flex; justify-content: space-between; gap: 12px;
+      font: 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted);
+      border-top: 3px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 7px 2px;
+    }
+    h1 { font-size: clamp(2.4rem, 7vw, 4.2rem); font-weight: 900; letter-spacing: -.02em; line-height: 1.02; margin: 26px 0 14px; }
+    h1 .pilcrow { color: var(--red); font-weight: 600; margin-right: .08em; }
+    .tagline { font-style: italic; font-size: 1.06rem; color: var(--ink-muted); max-width: 54ch; line-height: 1.55; margin-bottom: 30px; }
+
+    .drop {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+      text-align: center; padding: 44px 20px; cursor: pointer;
+      background: var(--sheet); border: 2px dashed var(--ink); box-shadow: 4px 4px 0 var(--ink);
+      transition: box-shadow .12s, background .12s;
+    }
+    .drop:hover, .drop.over { box-shadow: 4px 4px 0 var(--red); background: #fff; }
+    .drop strong { font-size: 1.25rem; font-weight: 600; }
+    .drop span { font: 12px var(--mono); color: var(--ink-muted); }
+    .drop:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+
+    .status { font: 12.5px var(--mono); color: var(--ink-muted); min-height: 1.4em; margin-top: 14px; }
+    .status.err { color: var(--red); }
+
+    .options { display: none; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 18px; font-family: var(--mono); }
+    .options.visible { display: flex; }
+    .options-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
+    .opt { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; cursor: pointer; }
+    .opt input[type=number] { width: 72px; font: 12.5px var(--mono); padding: 3px 6px; border: 1.5px solid var(--ink); background: var(--sheet); color: var(--ink); }
+    .opt input[type=checkbox] { accent-color: var(--red); width: 15px; height: 15px; }
+
+    .proof { display: none; margin-top: 28px; }
+    .proof.visible { display: block; }
+    .proof-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; border-bottom: 3px double var(--ink); padding-bottom: 10px; }
+    .stamp { display: inline-block; font: 600 10px var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--red); border: 1.5px solid var(--red); padding: 3px 8px; transform: rotate(-1.5deg); margin-bottom: 8px; }
+    .proof-title { font-size: 1.35rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+    .proof-sub { font: 11.5px var(--mono); color: var(--ink-muted); margin-top: 5px; }
+    .actions { display: flex; gap: 8px; }
+    button { font-family: var(--mono); cursor: pointer; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      border: 1.5px solid var(--ink); background: transparent; color: var(--ink);
+      font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 9px 14px;
+      transition: background .12s, color .12s;
+    }
+    .btn:hover { background: var(--ink); color: var(--sheet); }
+    .btn.primary { background: var(--ink); color: var(--sheet); box-shadow: 3px 3px 0 rgba(34,29,20,.28); }
+    .btn.primary:hover { background: var(--red); border-color: var(--red); }
+    .btn.flash { background: var(--red); border-color: var(--red); color: var(--sheet); }
+
+    .tabs { display: flex; margin-top: 16px; }
+    .tab { font: 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; border: 2px solid var(--ink); border-bottom: none; background: var(--paper-deep); color: var(--ink-muted); padding: 9px 18px; margin-right: -2px; }
+    .tab.active { background: var(--sheet); color: var(--ink); }
+    .sheet { background: var(--sheet); border: 2px solid var(--ink); box-shadow: 6px 6px 0 rgba(34,29,20,.2); }
+    .pane { display: none; }
+    .pane.active { display: block; }
+    pre { font: 12.5px/1.6 var(--mono); padding: 22px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 70vh; overflow: auto; }
+    iframe { width: 100%; height: 70vh; border: 0; background: #fff; }
+
+    @media (max-width: 560px) { .actions { width: 100%; } .btn { flex: 1; justify-content: center; } }
+  </style>
+</head>
+<body>
+<div class="press">
+  <header class="masthead">
+    <div class="slug"><span>pglevy / web-tools</span><span>transcript desk</span></div>
+    <h1><span class="pilcrow">&para;</span>Session to Markdown</h1>
+    <p class="tagline">Drop an exported Kiro session &mdash; the downloaded <code>.zip</code>, the <code>sess_…</code> folder, or just its <code>messages.jsonl</code> &mdash; and get a readable transcript to copy. Nothing leaves your browser.</p>
+  </header>
+
+  <section>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose or drop a session">
+      <strong>Drop a session .zip, folder or messages.jsonl</strong>
+      <span>or click to choose a file &middot; paste JSONL anywhere on the page</span>
+    </div>
+    <input type="file" id="file" accept=".zip,.jsonl,.json,.txt" multiple hidden>
+    <div class="status" id="status" role="status"></div>
+
+    <div class="options" id="options">
+      <span class="options-label">Include &mdash;</span>
+      <label class="opt"><input type="checkbox" id="o-tools" checked><span>Tool calls</span></label>
+      <label class="opt"><input type="checkbox" id="o-think"><span>Thinking</span></label>
+      <label class="opt"><span>Clip tool output at</span><input type="number" id="o-max" value="1500" min="100" step="100"></label>
+    </div>
+  </section>
+
+  <section class="proof" id="proof">
+    <div class="proof-head">
+      <div>
+        <div class="stamp">Transcript &middot; ready</div>
+        <div class="proof-title" id="title"></div>
+        <div class="proof-sub" id="sub"></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="copy"><span id="copy-label">Copy Markdown</span></button>
+        <button class="btn" id="download">Download .md</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-pane="md">Markdown</button>
+      <button class="tab" data-pane="preview">Preview</button>
+    </div>
+    <div class="sheet">
+      <div class="pane active" id="pane-md"><pre id="out"></pre></div>
+      <div class="pane" id="pane-preview"><iframe id="frame" sandbox="" title="Rendered transcript"></iframe></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const state = { meta: {}, lines: [], name: 'session', md: '' };
+
+  const clip = (s, n) => {
+    s = typeof s === 'string' ? s : JSON.stringify(s, null, 2);
+    return s.length <= n ? s : s.slice(0, n) + `\n… [${s.length - n} more chars truncated]`;
+  };
+  const fence = (text, lang = '') => {
+    let t = '```';
+    while (text.includes(t)) t += '`';
+    return `${t}${lang}\n${text}\n${t}\n`;
+  };
+
+  function convert(lines, meta, opt) {
+    const out = [`# ${meta.title || 'Session transcript'}\n`];
+    const info = [['Session', meta.id], ['Created', meta.createdAt], ['Last modified', meta.lastModifiedAt],
+                  ['Workspace', (meta.workspacePaths || []).join(', ')]];
+    info.forEach(([k, v]) => v && out.push(`- **${k}:** ${v}`));
+    out.push('');
+    let buf = null, open = new Set(), turns = 0;
+    const flush = () => {
+      if (!buf) return;
+      const text = buf.chunks.join('').trim();
+      if (buf.kind === 'Reasoning') {
+        if (opt.thinking && text.replace(/\./g, '')) out.push(`<details><summary>Thinking</summary>\n\n${text}\n\n</details>\n`);
+      } else if (text) out.push(`### Assistant\n\n${text}\n`);
+      buf = null;
+    };
+    for (const m of lines) {
+      const p = m.payload || {};
+      if (p.type === 'assistant') {
+        const kind = p.operationType || 'Say';
+        if (buf && buf.kind === kind) buf.chunks.push(p.content || '');
+        else { flush(); buf = { kind, chunks: [p.content || ''] }; }
+        continue;
+      }
+      flush();
+      if (p.type === 'user') {
+        turns++;
+        out.push(`---\n\n## User\n\n*${m.timestamp || ''}*\n\n${p.content || ''}\n`);
+      } else if (p.type === 'steering_inclusion' && (p.documents || []).length) {
+        out.push('*Steering included:* ' + p.documents.map(d => '`' + d.replace('file://', '') + '`').join(', ') + '\n');
+      } else if (p.type === 'tool_call' && opt.tools) {
+        const a = p.args && typeof p.args === 'object' ? { ...p.args } : p.args;
+        const expl = a && a.explanation; if (a && a.explanation) delete a.explanation;
+        open.add(p.toolCallId);
+        out.push(`<details><summary>🔧 <code>${p.toolName}</code>${expl ? ' — ' + expl : ''}</summary>\n\n` + fence(clip(a, opt.max), 'json'));
+      } else if (p.type === 'tool_result' && opt.tools) {
+        const fail = p.success === false ? ' (failed)' : '';
+        const res = fence(clip(p.content || '', opt.max));
+        if (open.delete(p.toolCallId)) out.push(`**Result${fail}:**\n\n${res}\n</details>\n`);
+        else out.push(`<details><summary>Tool result${fail}</summary>\n\n${res}\n</details>\n`);
+      }
+    }
+    flush();
+    open.forEach(() => out.push('</details>\n'));
+    return { md: out.join('\n'), turns };
+  }
+
+  function render() {
+    const opt = { tools: $('o-tools').checked, thinking: $('o-think').checked, max: Math.max(100, +$('o-max').value || 1500) };
+    const { md, turns } = convert(state.lines, state.meta, opt);
+    state.md = md;
+    $('out').textContent = md;
+    $('title').textContent = state.meta.title || state.name;
+    $('sub').textContent = `${turns} user message${turns === 1 ? '' : 's'} · ${md.length.toLocaleString()} characters`;
+    $('frame').srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font:15px/1.6 Georgia,serif;max-width:760px;margin:20px auto;padding:0 16px;color:#222}pre{background:#f4f1e8;padding:10px;overflow:auto;font-size:12px}code{font-size:.9em}details{margin:6px 0;border-left:3px solid #ddd;padding-left:10px}hr{margin:24px 0}</style></head><body>' + marked.parse(md) + '</body></html>';
+    $('proof').classList.add('visible');
+    $('options').classList.add('visible');
+  }
+
+  function setStatus(msg, err) { $('status').textContent = msg; $('status').classList.toggle('err', !!err); }
+
+  function parseJsonl(text) {
+    const rows = [];
+    for (const l of text.split('\n')) {
+      if (!l.trim()) continue;
+      try { const o = JSON.parse(l); if (o && o.payload) rows.push(o); } catch {}
+    }
+    return rows;
+  }
+
+  // Unpack a session zip into File objects: pick the shallowest messages.jsonl and its sibling session.json
+  async function unzip(zipFile) {
+    const zip = await JSZip.loadAsync(zipFile);
+    const names = Object.keys(zip.files).filter(n => !zip.files[n].dir && !n.startsWith('__MACOSX/') && !/(^|\/)\._/.test(n));
+    const msgs = names.filter(n => /(^|\/)messages\.jsonl$/.test(n)).sort((a, b) => a.split('/').length - b.split('/').length);
+    if (!msgs.length) return { files: [], label: '' };
+    const dir = msgs[0].slice(0, msgs[0].length - 'messages.jsonl'.length);
+    const files = [];
+    for (const n of [msgs[0], dir + 'session.json']) {
+      if (zip.files[n]) files.push(new File([await zip.files[n].async('blob')], n.split('/').pop()));
+    }
+    const label = dir ? dir.replace(/\/$/, '').split('/').pop() : zipFile.name.replace(/\.zip$/i, '');
+    return { files, label, extra: msgs.length - 1 };
+  }
+
+  async function load(files, label) {
+    const zipFile = files.find(f => /\.zip$/i.test(f.name));
+    if (zipFile) {
+      try {
+        const z = await unzip(zipFile);
+        if (!z.files.length) return setStatus('No messages.jsonl found inside that zip.', true);
+        files = z.files; label = z.label;
+        if (z.extra > 0) setStatus(`Zip holds ${z.extra + 1} sessions; showing the first.`);
+      } catch { return setStatus('Couldn’t read that zip file.', true); }
+    }
+    let jsonl = null, meta = {};
+    for (const f of files) {
+      if (f.name === 'session.json') { try { meta = JSON.parse(await f.text()); } catch {} }
+      else if (/\.(jsonl|txt)$/i.test(f.name) && (!jsonl || f.name === 'messages.jsonl')) jsonl = f;
+    }
+    if (!jsonl) return setStatus('No messages.jsonl found in what you dropped.', true);
+    const lines = parseJsonl(await jsonl.text());
+    if (!lines.length) return setStatus('That file has no session messages (expected lines with a "payload").', true);
+    Object.assign(state, { lines, meta, name: label || meta.id || jsonl.name.replace(/\.\w+$/, '') });
+    setStatus(`Loaded ${lines.length} records from ${zipFile ? zipFile.name : jsonl.name}${meta.title ? '' : ' (no session.json, so no title)'}.`);
+    render();
+  }
+
+  // Walk a dropped folder, only one level deep (session.json + messages.jsonl live at the top)
+  function readEntry(entry) {
+    return new Promise(res => {
+      if (entry.isFile) return entry.file(f => res([f]), () => res([]));
+      const r = entry.createReader(), all = [];
+      const next = () => r.readEntries(async es => {
+        if (!es.length) return res(all);
+        for (const e of es) if (e.isFile) all.push(...await readEntry(e));
+        next();
+      }, () => res(all));
+      next();
+    });
+  }
+
+  const drop = $('drop');
+  drop.addEventListener('click', () => $('file').click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } });
+  $('file').addEventListener('change', e => load([...e.target.files]));
+  ['dragenter', 'dragover'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => window.addEventListener(t, e => { if (t === 'drop' || e.target === document.documentElement) drop.classList.remove('over'); }));
+  window.addEventListener('drop', async e => {
+    e.preventDefault();
+    const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    let files = [], label = '';
+    if (items.length) {
+      for (const it of items) { if (it.isDirectory) label = it.name; files.push(...await readEntry(it)); }
+    } else files = [...e.dataTransfer.files];
+    load(files, label);
+  });
+  window.addEventListener('paste', e => {
+    const t = e.clipboardData.getData('text');
+    if (t && t.includes('"payload"')) load([new File([t], 'pasted.jsonl')]);
+  });
+
+  ['o-tools', 'o-think', 'o-max'].forEach(id => $(id).addEventListener('input', () => state.lines.length && render()));
+
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    $('pane-md').classList.toggle('active', t.dataset.pane === 'md');
+    $('pane-preview').classList.toggle('active', t.dataset.pane === 'preview');
+  }));
+
+  $('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(state.md); } catch {
+      const r = document.createRange(); r.selectNodeContents($('out'));
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy');
+    }
+    $('copy-label').textContent = 'Copied ✓'; $('copy').classList.add('flash');
+    setTimeout(() => { $('copy-label').textContent = 'Copy Markdown'; $('copy').classList.remove('flash'); }, 1400);
+  });
+
+  $('download').addEventListener('click', () => {
+    const slug = (state.meta.title || state.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'session';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([state.md], { type: 'text/markdown' }));
+    a.download = slug + '.md'; a.click(); URL.revokeObjectURL(a.href);
+  });
+</script>
+</body>
+</html>
