@@ -19,6 +19,7 @@ Inspired by [Simon Willison's tools](https://github.com/simonw/tools). See also 
 - **[Repo Archiver](https://pglevy.github.io/web-tools/repo-archiver.html)**: Scan your GitHub repos, score them for staleness, and archive the ones collecting dust. A visual repo cleanup tool.
 - **[Sailwind Stats](https://pglevy.github.io/web-tools/sailwind-stats.html)**: Combined dashboard showing npm downloads (prototyping template) and jsDelivr token requests (mockup skill) for the Sailwind design system.
 - **[Screenshot Generator](https://pglevy.github.io/web-tools/screenshot-generator.html)**: Create beautiful screenshots with customizable window frames, backgrounds, shadows, and padding. Paste, drop, or upload images to generate styled screenshots instantly.
+- **[Session to Markdown](https://pglevy.github.io/web-tools/session-to-markdown.html)**: Drop an exported Kiro session zip, folder or `messages.jsonl` to get a readable Markdown transcript. Toggle tool calls and thinking, then copy or download. Runs entirely in the browser.
 - **[Typographer's Palette](https://pglevy.github.io/web-tools/typographers-palette.html)**: A quick-reference for curly quotes, dashes, and special characters. Click any symbol to copy its HTML entity to your clipboard.
 
 ## Philosophy
