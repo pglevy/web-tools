@@ -861,7 +861,7 @@
                 document.getElementById('statsBar').classList.remove('hidden');
                 document.getElementById('filterBar').classList.remove('hidden');
             } catch (err) {
-                showStatus(err.message, 'error');
+                showStatus(esc(err.message), 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Scan Repos';
