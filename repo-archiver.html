@@ -861,7 +861,7 @@
                 document.getElementById('statsBar').classList.remove('hidden');
                 document.getElementById('filterBar').classList.remove('hidden');
             } catch (err) {
-                showStatus(err.message, 'error');
+                showStatus(esc(err.message), 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Scan Repos';
@@ -916,11 +916,11 @@
                 ).join('');
 
                 return `
-                    <div class="repo-row ${selectedClass}" data-name="${r.name}">
-                        <input type="checkbox" class="repo-checkbox" ${checked} onchange="toggleSelect('${r.name}')">
+                    <div class="repo-row ${selectedClass}" data-name="${esc(r.name)}">
+                        <input type="checkbox" class="repo-checkbox" ${checked} onchange="toggleSelect(this.closest('.repo-row').dataset.name)">
                         <div class="repo-info">
-                            <div class="repo-name"><a href="${r.html_url}" target="_blank" rel="noopener">${r.name}</a>${forkTag}</div>
-                            <div class="repo-desc">${r.description || '(no description)'}</div>
+                            <div class="repo-name"><a href="${esc(r.html_url)}" target="_blank" rel="noopener">${esc(r.name)}</a>${forkTag}</div>
+                            <div class="repo-desc">${esc(r.description) || '(no description)'}</div>
                         </div>
                         <div class="repo-meta stars">⭐ ${r.stars}</div>
                         <div class="repo-meta">${pushed}</div>
@@ -966,10 +966,13 @@
             else bar.classList.remove('visible');
         }
 
+        // ── Escaping ───────────────────────────────────────────
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
         // ── Archive ────────────────────────────────────────────
         function showConfirmModal() {
             const list = document.getElementById('confirmList');
-            list.innerHTML = [...selectedRepos].map(n => `<div>• ${n}</div>`).join('');
+            list.innerHTML = [...selectedRepos].map(n => `<div>• ${esc(n)}</div>`).join('');
             document.getElementById('confirmModal').classList.add('visible');
             document.getElementById('archiveProgress').classList.add('hidden');
             document.getElementById('archiveStatus').innerHTML = '';
@@ -1001,7 +1004,7 @@
                 const name = repos[i];
                 const pct = ((i + 1) / repos.length * 100).toFixed(0);
                 progressFill.style.width = pct + '%';
-                statusEl.innerHTML = `<div class="status-msg info" style="margin:8px 0">Archiving ${name}... (${i + 1}/${repos.length})</div>`;
+                statusEl.innerHTML = `<div class="status-msg info" style="margin:8px 0">Archiving ${esc(name)}... (${i + 1}/${repos.length})</div>`;
 
                 try {
                     await ghFetch(`https://api.github.com/repos/${username}/${name}`, {
