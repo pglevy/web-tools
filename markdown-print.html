@@ -6,6 +6,7 @@
     <meta name="description" content="Drop a Markdown file to render it as a beautifully typeset page ready for printing to PDF.">
     <title>Markdown Print</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,400&display=swap');
 
@@ -614,7 +615,7 @@
 
         // --- Render ---
         function renderMarkdown(md) {
-            article.innerHTML = marked.parse(md);
+            article.innerHTML = DOMPurify.sanitize(marked.parse(md));
 
             // Resolve relative image paths from asset map
             if (Object.keys(assetMap).length > 0) {
