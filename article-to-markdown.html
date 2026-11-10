@@ -435,6 +435,45 @@
 
     .fallback .btn { margin-top: 12px; }
 
+    /* ── Bookmarklet ──────────────────────────── */
+    .bookmarklet {
+      margin-top: 34px;
+      border: 2px dashed var(--ink);
+      padding: 16px 18px;
+      animation: rise 0.5s 0.14s ease both;
+    }
+
+    .bookmarklet h2 {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 8px;
+    }
+
+    .bookmarklet p {
+      font-style: italic;
+      font-size: 0.92rem;
+      color: var(--ink-muted);
+      line-height: 1.55;
+      max-width: 62ch;
+    }
+
+    .bookmarklet a.drag {
+      display: inline-block;
+      margin: 10px 0 8px;
+      padding: 8px 14px;
+      background: var(--sheet);
+      border: 2px solid var(--ink);
+      box-shadow: 4px 4px 0 var(--red);
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--ink);
+      text-decoration: none;
+      cursor: grab;
+    }
+
     /* ── Footer ───────────────────────────────── */
     .colophon {
       margin-top: 60px;
@@ -530,17 +569,24 @@
       </div>
     </section>
 
+    <section class="bookmarklet" aria-labelledby="bm-title">
+      <h2 id="bm-title">Best for blocked or logged-in pages: bookmarklet</h2>
+      <p>Drag this to your bookmarks bar. On any article, click it to send that page straight here, no proxy involved.</p>
+      <a class="drag" id="bookmarklet" href="#" title="Drag to your bookmarks bar">&#10038; To Markdown</a>
+      <p>It sends the page&rsquo;s HTML from your browser to this tab and nowhere else. Sites with a strict content security policy may block bookmarklets; use the paste option below there.</p>
+    </section>
+
     <details class="fallback" id="fallback">
       <summary>Blocked? Paste the page HTML instead</summary>
       <div class="fallback-body">
-        <p class="fallback-hint">Some sites refuse proxy fetches. As a fallback, open the article, view source (or use devtools: <code>copy(document.documentElement.outerHTML)</code>), and paste the HTML here. The URL field above is still used for resolving links and the front matter source.</p>
+        <p class="fallback-hint">Public proxies are unreliable and many sites refuse them. If you can&rsquo;t use the bookmarklet, open the article, view source (or use devtools: <code>copy(document.documentElement.outerHTML)</code>), and paste the HTML here. The URL field above is still used for resolving links and the front matter source.</p>
         <textarea id="html-input" placeholder="&lt;html&gt;&hellip;" spellcheck="false"></textarea>
         <button class="btn" id="paste-btn">Convert pasted HTML</button>
       </div>
     </details>
 
     <footer class="colophon">
-      <p>Set entirely in your browser with <a href="https://github.com/mozilla/readability">Readability</a> (article extraction) and <a href="https://github.com/mixmark-io/turndown">Turndown</a> (Markdown conversion). Cross-origin pages are fetched through public CORS proxies (allorigins, corsproxy, codetabs), so the article URL passes through those services &mdash; everything after that stays local. <a href="https://github.com/pglevy/web-tools">View source on GitHub</a>.</p>
+      <p>Set entirely in your browser with <a href="https://github.com/mozilla/readability">Readability</a> (article extraction) and <a href="https://github.com/mixmark-io/turndown">Turndown</a> (Markdown conversion). Typing a URL tries a direct fetch, then public CORS proxies (allorigins, corsproxy, codetabs) &mdash; so the URL passes through those services, and they are often down. The bookmarklet and paste routes never leave your browser. <a href="https://github.com/pglevy/web-tools">View source on GitHub</a>.</p>
     </footer>
 
   </div>
@@ -736,7 +782,7 @@
         const { html, via } = await fetchArticleHtml(url);
         applyExtraction(html, url, via);
       } catch {
-        setStatus('Couldn’t fetch that page &mdash; the site may block proxies. Try the paste-HTML fallback below.', true);
+        setStatus('Couldn’t fetch that page &mdash; the site may block proxies. Use the bookmarklet above, or the paste-HTML fallback below.', true);
         $('fallback').open = true;
       } finally {
         btn.disabled = false;
@@ -801,6 +847,29 @@
         document.querySelectorAll('.pane').forEach(p =>
           p.classList.toggle('active', p.id === `pane-${tab.dataset.pane}`));
       }));
+
+    // ── Bookmarklet ──────────────────────────
+    const TOOL_URL = location.origin + location.pathname;
+    const TARGET_ORIGIN = location.origin === 'null' ? '*' : location.origin;
+    const bookmarkletSrc = `(function(){var w=window.open(${JSON.stringify(TOOL_URL + '#bookmarklet')},'_blank');if(!w){alert('Allow popups to use To Markdown');return}var h=document.documentElement.outerHTML,u=location.href;function f(e){if(e.source===w&&e.data==='a2m-ready'){w.postMessage({type:'a2m-html',html:h,url:u},${JSON.stringify(TARGET_ORIGIN)});removeEventListener('message',f)}}addEventListener('message',f)})()`;
+    $('bookmarklet').href = 'javascript:' + encodeURIComponent(bookmarkletSrc);
+    $('bookmarklet').addEventListener('click', e => {
+      e.preventDefault();
+      setStatus('Drag that button to your bookmarks bar, then click it while viewing an article.');
+    });
+
+    // Receive HTML from the bookmarklet (only from the tab that opened us).
+    window.addEventListener('message', e => {
+      const d = e.data;
+      if (e.source !== window.opener || !d || d.type !== 'a2m-html' || typeof d.html !== 'string') return;
+      const url = typeof d.url === 'string' ? normalizeUrl(d.url) || '' : '';
+      $('url-input').value = url;
+      applyExtraction(d.html, url, 'bookmarklet');
+    });
+    if (window.opener) {
+      setStatus('<span class="spinner">&#10038;</span> Waiting for the page&hellip;');
+      try { window.opener.postMessage('a2m-ready', '*'); } catch { /* opener not reachable */ }
+    }
 
     $('paste-btn').addEventListener('click', () => {
       const html = $('html-input').value.trim();

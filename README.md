@@ -7,7 +7,7 @@ Inspired by [Simon Willison's tools](https://github.com/simonw/tools). See also 
 ## Tools
 
 - **[AI Context Decision Tree](https://pglevy.github.io/web-tools/ai-context-decision-tree.html)**: An interactive decision tree to help you choose the right AI context mechanism (steering files, skills, hooks, MCP servers, etc.) for your use case.
-- **[Article to Markdown](https://pglevy.github.io/web-tools/article-to-markdown.html)**: Pull the text of any blog post or article as clean Markdown. Preview the extraction, strip images and link clutter, then copy or download — perfect for feeding references to AI agents.
+- **[Article to Markdown](https://pglevy.github.io/web-tools/article-to-markdown.html)**: Pull the text of any blog post or article as clean Markdown. Preview the extraction, strip images and link clutter, then copy or download — perfect for feeding references to AI agents. Includes a bookmarklet (and a paste-HTML option) for pages that block proxy fetching.
 - **[Coffee Ratio Calculator](https://pglevy.github.io/web-tools/coffee-ratio.html)**: A simple, beautiful coffee ratio calculator to find the perfect coffee-to-water ratio for your brew strength and serving size.
 - **[Color Converter](https://pglevy.github.io/web-tools/color-converter.html)**: Convert colors between HEX, RGB, HSL, and other formats. Supports multiple color spaces with live preview.
 - **[Contact Catalog](https://pglevy.github.io/web-tools/vcf-contact-manager.html)**: Validate, view, and manage a contact list exported from a phone as a .vcf file. Flags missing names, malformed numbers/emails, and duplicates, with inline editing and VCF/CSV export.
