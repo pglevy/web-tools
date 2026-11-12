@@ -616,6 +616,17 @@
         base.href = url;
         doc.head.appendChild(base);
       }
+      // Some sites ship copyable snippets as <textarea> (e.g. <markdown-copy>).
+      // Readability/Turndown drop form controls, so turn them into code blocks.
+      doc.querySelectorAll('textarea').forEach(ta => {
+        const text = ta.value || ta.textContent;
+        if (!text.trim()) return;
+        const pre = doc.createElement('pre');
+        const code = doc.createElement('code');
+        code.textContent = text;
+        pre.appendChild(code);
+        ta.replaceWith(pre);
+      });
       const article = new Readability(doc, { keepClasses: false }).parse();
       if (!article || !article.content) throw new Error('no article content found');
       return article;
